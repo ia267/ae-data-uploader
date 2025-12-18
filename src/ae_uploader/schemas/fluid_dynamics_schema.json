@@ -1,0 +1,298 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ae-datastore.org/schemas/fluid-dynamics-metadata/v1.0",
+  "title": "Fluid Dynamics Domain Metadata Schema",
+  "description": "Schema for validating fluid dynamics metadata (numerical and experimental) before upload to Invenio-RDM",
+  "type": "object",
+  "required": [
+    "title",
+    "description",
+    "creators",
+    "publication_date",
+    "resource_type",
+    "domain"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 255,
+      "description": "Title of the dataset"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Detailed description of the dataset"
+    },
+    "creators": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["person_or_org"],
+        "properties": {
+          "person_or_org": {
+            "type": "object",
+            "required": ["type", "family_name"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["personal", "organizational"]
+              },
+              "given_name": {
+                "type": "string"
+              },
+              "family_name": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "identifiers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "scheme": {
+                      "type": "string"
+                    },
+                    "identifier": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "affiliations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "publication_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of publication (YYYY-MM-DD)"
+    },
+    "resource_type": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": ["dataset", "software", "publication"],
+          "description": "Type of resource"
+        }
+      }
+    },
+    "domain": {
+      "type": "object",
+      "required": ["discipline", "study", "observations"],
+      "properties": {
+        "discipline": {
+          "type": "string",
+          "enum": ["fluid_dynamics", "structures"],
+          "description": "Domain discipline"
+        },
+        "study": {
+          "type": "object",
+          "required": ["field", "keywords"],
+          "properties": {
+            "field": {
+              "type": "string",
+              "enum": ["jet", "boundary_layer", "wake", "combustion", "other"],
+              "description": "Primary research field"
+            },
+            "subfield": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Subfields of study"
+            },
+            "regime": {
+              "type": "string",
+              "description": "Flow regime (e.g., compressible, incompressible)"
+            },
+            "model": {
+              "type": "string",
+              "description": "Model or case name (e.g., Ahmed body, contrails)"
+            },
+            "keywords": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Keywords for discovery"
+            }
+          }
+        },
+        "observations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["observation_type", "facility", "observed_quantities"],
+            "properties": {
+              "observation_type": {
+                "type": "string",
+                "enum": ["numerical", "experimental"],
+                "description": "Type of observation"
+              },
+              "facility": {
+                "type": "string",
+                "description": "Name of facility, code, or wind tunnel"
+              },
+              "methods": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Methods used (e.g., LES, PIV, RANS)"
+              },
+              "data_acquisition_settings": {
+                "type": "string",
+                "description": "Data acquisition settings (e.g., time_resolved, steady)"
+              },
+              "operating_conditions": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Operating conditions as key-value pairs. Allows any key names for flexibility."
+              },
+              "observed_quantities": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Quantities that were measured or simulated"
+              },
+              "model_description": {
+                "type": "string",
+                "description": "Description of the model or setup"
+              },
+              "coordinate_system": {
+                "type": "string",
+                "description": "Description of coordinate system"
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["variables"],
+                  "properties": {
+                    "file_name": {
+                      "type": "string",
+                      "description": "File name or pattern"
+                    },
+                    "file_type": {
+                      "type": "string",
+                      "description": "File type (e.g., vtk, csv, hdf5)"
+                    },
+                    "multiple_files_rule": {
+                      "type": "string",
+                      "description": "Rule for multiple files (e.g., timestep, block number)"
+                    },
+                    "variables": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of variables in the file"
+                    },
+                    "variable_description": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "patternProperties": {
+                        "^[a-zA-Z_][a-zA-Z0-9_=]*$": {
+                          "type": "string"
+                        }
+                      },
+                      "description": "Descriptions for each variable. Keys must match variable names."
+                    },
+                    "variable_units": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "patternProperties": {
+                        "^[a-zA-Z_][a-zA-Z0-9_=]*$": {
+                          "type": "string"
+                        }
+                      },
+                      "description": "Units for each variable. Keys must match variable names."
+                    },
+                    "storage_format": {
+                      "type": "string",
+                      "description": "Storage format (binary or ASCII)"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Description of the file"
+                    },
+                    "example_code": {
+                      "type": "string",
+                      "description": "URL or snippet of example code"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "cc-by-4.0",
+              "cc-by-sa-4.0",
+              "cc0-1.0",
+              "mit",
+              "apache-2.0",
+              "gpl-3.0"
+            ]
+          }
+        }
+      }
+    },
+    "funding": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "funder": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "award": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

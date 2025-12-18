@@ -1,0 +1,108 @@
+{
+  "title": "PIV Measurements of Turbulent Boundary Layer",
+  "description": "Particle Image Velocimetry measurements of a turbulent boundary layer over a flat plate at high Reynolds number",
+  "creators": [
+    {
+      "person_or_org": {
+        "type": "personal",
+        "given_name": "Jane",
+        "family_name": "Smith",
+        "identifiers": [
+          {
+            "scheme": "orcid",
+            "identifier": "0000-0003-9876-5432"
+          }
+        ]
+      },
+      "affiliations": [
+        {
+          "name": "Aerospace Engineering Department, University Example"
+        }
+      ]
+    }
+  ],
+  "publication_date": "2025-12-18",
+  "resource_type": {
+    "id": "dataset"
+  },
+  "domain": {
+    "discipline": "fluid_dynamics",
+    "study": {
+      "field": "boundary_layer",
+      "subfield": ["turbulence"],
+      "regime": "incompressible turbulent",
+      "model": "flat_plate_boundary_layer",
+      "keywords": ["PIV", "turbulence", "boundary layer", "experimental"]
+    },
+    "observations": [
+      {
+        "observation_type": "experimental",
+        "facility": "Wind Tunnel A - University Lab",
+        "methods": ["PIV", "Stereo-PIV"],
+        "data_acquisition_settings": "time_resolved",
+        "operating_conditions": {
+          "Freestream_velocity_m_s": 25,
+          "Reynolds_theta": 5000,
+          "Temperature_C": 20,
+          "Atmospheric_pressure_Pa": 101325
+        },
+        "observed_quantities": [
+          "velocity",
+          "velocity_fluctuations",
+          "Reynolds_stresses"
+        ],
+        "model_description": "Time-resolved PIV measurements in streamwise-wall-normal plane",
+        "coordinate_system": "X streamwise, Y wall-normal, Z spanwise. Origin at leading edge of plate",
+        "files": [
+          {
+            "file_name": "piv_data_field_*.dat",
+            "file_type": "dat",
+            "multiple_files_rule": "timestep number",
+            "variables": [
+              "x", "y",
+              "u", "v",
+              "u_rms", "v_rms",
+              "uv_reynolds_stress"
+            ],
+            "variable_description": {
+              "x": "streamwise coordinate",
+              "y": "wall-normal coordinate",
+              "u": "streamwise velocity component",
+              "v": "wall-normal velocity component",
+              "u_rms": "streamwise velocity fluctuation rms",
+              "v_rms": "wall-normal velocity fluctuation rms",
+              "uv_reynolds_stress": "Reynolds shear stress"
+            },
+            "variable_units": {
+              "x": "m",
+              "y": "m",
+              "u": "m/s",
+              "v": "m/s",
+              "u_rms": "m/s",
+              "v_rms": "m/s",
+              "uv_reynolds_stress": "m2/s2"
+            },
+            "storage_format": "ASCII",
+            "description": "ASCII files with space-separated columns. Each file is one timestep.",
+            "example_code": "import numpy as np; data = np.loadtxt('piv_data_field_001.dat')"
+          }
+        ]
+      }
+    ]
+  },
+  "rights": [
+    {
+      "id": "cc-by-4.0"
+    }
+  ],
+  "funding": [
+    {
+      "funder": {
+        "name": "National Science Foundation"
+      },
+      "award": {
+        "number": "NSF-1234567"
+      }
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "title": "LES Simulation of Contrails Formation",
+  "description": "Volumetric data from LES simulation of contrails formation behind aircraft engines",
+  "creators": [
+    {
+      "person_or_org": {
+        "type": "personal",
+        "given_name": "John",
+        "family_name": "Doe",
+        "identifiers": [
+          {
+            "scheme": "orcid",
+            "identifier": "0000-0002-1234-5678"
+          }
+        ]
+      },
+      "affiliations": [
+        {
+          "name": "Your Institution"
+        }
+      ]
+    }
+  ],
+  "publication_date": "2025-12-18",
+  "resource_type": {
+    "id": "dataset"
+  },
+  "domain": {
+    "discipline": "fluid_dynamics",
+    "study": {
+      "field": "jet",
+      "subfield": ["combustion", "multi-phase"],
+      "regime": "compressible multi-phase",
+      "model": "contrails",
+      "keywords": ["ice-microphysics", "dilution", "mass-transfer", "LES"]
+    },
+    "observations": [
+      {
+        "observation_type": "numerical",
+        "facility": "BOFFIN",
+        "methods": ["LES", "PBE"],
+        "data_acquisition_settings": "time_resolved",
+        "operating_conditions": {
+          "Altitude_m": 11000,
+          "Mach": 0.7,
+          "Fuel": "n-buthanol",
+          "Equivalence_ratio": 0.18,
+          "Ambient_relative_humidity_percent": 2.5
+        },
+        "observed_quantities": [
+          "velocity",
+          "pressure",
+          "temperature",
+          "molar_fractions",
+          "number_density",
+          "mass_density"
+        ],
+        "model_description": "Volumetric data with gas-phase and particle statistics at each point in space",
+        "coordinate_system": "Z streamwise, X and Y cross-stream. Origin at the center of the jet inlet",
+        "files": [
+          {
+            "file_name": "solution.00210000.domain.****.vtk",
+            "file_type": "vtk",
+            "multiple_files_rule": "block number",
+            "variables": [
+              "u", "v", "w", "w_rms",
+              "pressure", "temperature", "density",
+              "temperature_mean", "temperature_rms",
+              "X_H2O", "Mean_H2O",
+              "nv=1", "nv=2",
+              "Mean_nv=1", "Mean_nv=2",
+              "mass=1", "mass=2"
+            ],
+            "variable_description": {
+              "u": "cross-stream velocity (x-direction)",
+              "v": "cross-stream velocity (y-direction)",
+              "w": "streamwise velocity",
+              "w_rms": "streamwise velocity temporal rms",
+              "X_H2O": "water vapor molar fraction",
+              "nv=1": "particle number density per unit PBE cell volume for bin 1",
+              "mass=1": "particle mass density for bin 1"
+            },
+            "variable_units": {
+              "u": "m/s",
+              "v": "m/s",
+              "w": "m/s",
+              "w_rms": "m/s",
+              "pressure": "Pa",
+              "temperature": "K",
+              "density": "kg/m3",
+              "X_H2O": "mole fraction",
+              "nv=1": "1/m3",
+              "mass=1": "kg/m3"
+            },
+            "storage_format": "binary",
+            "description": "List of files with multi-block vtk data structure. Use Paraview or pyvista for interactive visualizations and post-processing.",
+            "example_code": "https://github.com/username/repo/tree/main/Python_Post_processing"
+          }
+        ]
+      }
+    ]
+  }
+}
