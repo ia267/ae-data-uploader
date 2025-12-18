@@ -1,7 +1,8 @@
 """
 Metadata validation module.
 
-This module provides functions to validate fluid dynamics metadata against the JSON schema.
+This module provides functions to validate research metadata against the JSON schema.
+Supports both fluid mechanics and structural mechanics data.
 """
 
 import json
@@ -68,7 +69,7 @@ def load_schema(schema_name: str = "fluid_dynamics_schema.json") -> Dict[str, An
 
 def validate_metadata(metadata: Dict[str, Any], schema: Dict[str, Any] = None) -> Tuple[bool, List[str]]:
     """
-    Validate metadata against the CFD schema.
+    Validate metadata against the schema.
     
     Args:
         metadata: Dictionary containing the metadata to validate
@@ -78,7 +79,7 @@ def validate_metadata(metadata: Dict[str, Any], schema: Dict[str, Any] = None) -
         Tuple of (is_valid, error_messages)
         
     Example:
-        >>> metadata = {"title": "My CFD Sim", ...}
+        >>> metadata = {"title": "My Dataset", ...}
         >>> is_valid, errors = validate_metadata(metadata)
         >>> if not is_valid:
         ...     print("\\n".join(errors))

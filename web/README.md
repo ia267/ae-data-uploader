@@ -1,6 +1,8 @@
 # Web-Based Metadata Generator
 
-This HTML form provides a user-friendly interface for generating metadata.json files without using the command line.
+This HTML form provides a user-friendly interface for generating metadata.json files for research data without using the command line.
+
+Supports both fluid mechanics and structural mechanics datasets.
 
 ## Usage
 

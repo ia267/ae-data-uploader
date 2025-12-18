@@ -1,13 +1,18 @@
 # AE Uploader
 
-A Python CLI tool for uploading fluid dynamics data (numerical and experimental) to Invenio-RDM repositories with comprehensive metadata validation.
+A Python CLI tool for uploading aeronautics research data to Invenio-RDM repositories with comprehensive metadata validation.
+
+Designed for the Department of Aeronautics at Imperial College London, this tool supports:
+- **Fluid Mechanics**: CFD simulations and experimental flow measurements
+- **Structural Mechanics**: Numerical simulations and experimental structural tests
 
 ## Features
 
 **Metadata Validation**: Validates metadata against a strict JSON schema before upload  
 **Custom Schema Support**: Export and modify schemas for institutional requirements  
-**Domain-Specific Schema**: Supports fluid dynamics and structures disciplines  
+**Multi-Discipline Support**: Fluid mechanics and structural mechanics disciplines  
 **Numerical & Experimental**: Handles both numerical simulations and experimental observations  
+**Department-Wide**: Designed for all aeronautics research data at Imperial College London  
 **Smart Packaging**: Automatically zips directories or uploads files individually  
 **Direct Upload**: Seamless integration with Invenio-RDM API  
 **CLI Interface**: Simple command-line interface for quick operations  
@@ -385,7 +390,7 @@ Restrict keywords to a controlled vocabulary:
 
 ## Metadata Schema
 
-The tool validates metadata against a comprehensive JSON schema for fluid dynamics research.
+The tool validates metadata against a comprehensive JSON schema for aeronautics research, covering both fluid mechanics and structural mechanics disciplines.
 
 ### Required Fields
 

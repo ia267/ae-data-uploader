@@ -96,6 +96,7 @@
 <body>
     <h1>AE Datastore Metadata Form</h1>
     <p>Fill in this form to generate valid JSON metadata for InvenioRDM upload.</p>
+    <p style="margin-top: 10px; color: #666;">Supports fluid mechanics and structural mechanics data from the Department of Aeronautics.</p>
 
     <form id="metadataForm">
         <!-- Basic Metadata -->
@@ -147,14 +148,21 @@
                 <option value="other">Other</option>
             </select>
 
+            <label for="subfield">Subfield (comma-separated)</label>
+            <input type="text" id="subfield" placeholder="e.g., combustion, multi-phase, turbulent">
+            <div class="help-text">Controlled subfield terms (e.g., turbulent, buckling)</div>
+
             <label for="regime">Regime</label>
-            <input type="text" id="regime" placeholder="e.g., compressible multi-phase">
+            <input type="text" id="regime" placeholder="e.g., compressible multi-phase, low_Re, incompressible">
+            <div class="help-text">Flow or structural regime (e.g., low_Re, high_Re, incompressible, compressible, or N/A)</div>
 
             <label for="model">Model</label>
-            <input type="text" id="model" placeholder="e.g., contrails, Ahmed body">
+            <input type="text" id="model" placeholder="e.g., contrails, Ahmed body, N/A">
+            <div class="help-text">Name or type of model (use N/A if not applicable)</div>
 
             <label for="keywords" class="required">Keywords (comma-separated)</label>
-            <input type="text" id="keywords" required placeholder="e.g., turbulence, LES, ice-microphysics">
+            <input type="text" id="keywords" required placeholder="e.g., ice-microphysics, dilution, mass-transfer">
+            <div class="help-text">Free-form keywords or controlled vocabulary terms</div>
         </div>
 
         <!-- Observation Metadata -->
@@ -169,10 +177,12 @@
             </select>
 
             <label for="facility" class="required">Facility/Code Name</label>
-            <input type="text" id="facility" required placeholder="e.g., BOFFIN, Nektar++, Wind Tunnel">
+            <input type="text" id="facility" required placeholder="e.g., BOFFIN, Nektar++, 10x5 wind tunnel">
+            <div class="help-text">Name of computational code or experimental facility</div>
 
             <label for="methods">Methods (comma-separated)</label>
-            <input type="text" id="methods" placeholder="e.g., LES, PBE, PIV">
+            <input type="text" id="methods" placeholder="e.g., LES, PBE, PIV, PTV">
+            <div class="help-text">List of methods or techniques used</div>
 
             <label for="dataAcquisition">Data Acquisition Settings</label>
             <select id="dataAcquisition">
@@ -184,17 +194,21 @@
             </select>
 
             <h3>Operating Conditions</h3>
-            <div class="help-text">Enter operating conditions as key:value pairs, one per line</div>
-            <textarea id="operatingConditions" rows="6" placeholder="Mach: 0.7&#10;Re: 1000000&#10;Temperature: 300&#10;Pressure: 101325"></textarea>
+            <div class="help-text">Enter operating conditions as key:value pairs, one per line. Include units in brackets if needed.</div>
+            <textarea id="operatingConditions" rows="6" placeholder="Altitude[m]: 11000&#10;Mach: 0.7&#10;Fuel: n-butanol&#10;Equivalence_ratio: 0.18&#10;Ambient_relative_humidity[%]: 2.5"></textarea>
+            <div class="help-text">Example: Altitude[m]: 11000, Re: 1e6, Temperature[K]: 300</div>
 
             <label for="observedQuantities">Observed Quantities (comma-separated)</label>
-            <input type="text" id="observedQuantities" placeholder="e.g., velocity, pressure, temperature">
+            <input type="text" id="observedQuantities" placeholder="e.g., velocity, pressure, temperature, molar_fractions, number_density">
+            <div class="help-text">List of measured or simulated quantities</div>
 
             <label for="modelDescription">Model Description</label>
-            <textarea id="modelDescription"></textarea>
+            <textarea id="modelDescription" placeholder="e.g., Volumetric data with gas-phase and particle statistics at each point in space"></textarea>
+            <div class="help-text">Free-text summary or link to diagram/technical note</div>
 
             <label for="coordinateSystem">Coordinate System</label>
-            <input type="text" id="coordinateSystem" placeholder="e.g., Z streamwise, X and Y cross-stream">
+            <input type="text" id="coordinateSystem" placeholder="e.g., Z streamwise, X and Y cross-stream. Origin at jet inlet">
+            <div class="help-text">Description of spatial/temporal frame of reference</div>
         </div>
 
         <!-- File Metadata -->
@@ -202,18 +216,20 @@
             <h2>File Metadata (Optional)</h2>
 
             <label for="fileName">File Name Pattern</label>
-            <input type="text" id="fileName" placeholder="e.g., velocity_*.vtk or data_file.csv">
-            <div class="help-text">Use * for wildcards if you have multiple files</div>
+            <input type="text" id="fileName" placeholder="e.g., solution.00210000.domain.****.vtk">
+            <div class="help-text">Use wildcards (*) or patterns (****) for multiple files</div>
 
             <label for="fileType">File Type</label>
             <input type="text" id="fileType" placeholder="e.g., vtk, csv, hdf5, netcdf">
 
             <label for="multipleFilesRule">Multiple Files Rule</label>
-            <input type="text" id="multipleFilesRule" placeholder="e.g., timestep number, block number">
+            <input type="text" id="multipleFilesRule" placeholder="e.g., block number, timestep number">
+            <div class="help-text">Quantities changing between files and with which increment</div>
 
             <h3>Variables in Files</h3>
             <div class="help-text">Format: variable_name | description | units (one per line)</div>
-            <textarea id="variablesTable" rows="6" placeholder="u | velocity in x-direction | m/s&#10;v | velocity in y-direction | m/s&#10;p | pressure | Pa"></textarea>
+            <textarea id="variablesTable" rows="8" placeholder="u | cross-stream velocity | m/s&#10;v | cross-stream velocity | m/s&#10;w | streamwise velocity | m/s&#10;w_rms | streamwise velocity temporal rms | m/s&#10;pressure | pressure | Pa&#10;temperature | temperature | K&#10;X_H2O | water vapor molar fraction | -&#10;nv=1 | particle number density per unit PBE cell volume bin 1 | 1/m^3"></textarea>
+            <div class="help-text">List all variables with descriptive names. Use SI units or specify appropriately.</div>
 
             <label for="storageFormat">Storage Format</label>
             <select id="storageFormat">
@@ -223,7 +239,8 @@
             </select>
 
             <label for="fileDescription">File Description</label>
-            <textarea id="fileDescription"></textarea>
+            <textarea id="fileDescription" placeholder="e.g., Multi-block vtk data structure. Use Paraview or pyvista for visualization."></textarea>
+            <div class="help-text">Help users understand file contents and which software to use</div>
         </div>
 
         <!-- License -->
@@ -301,6 +318,9 @@
             }
 
             // Add optional study fields
+            const subfield = parseList(document.getElementById('subfield').value);
+            if (subfield.length) metadata.domain.study.subfield = subfield;
+            
             const regime = document.getElementById('regime').value.trim();
             if (regime) metadata.domain.study.regime = regime;
             

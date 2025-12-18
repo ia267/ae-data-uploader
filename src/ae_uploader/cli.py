@@ -1,7 +1,7 @@
 """
 Command-line interface for ae-uploader.
 
-This module provides the CLI commands for uploading CFD data to Invenio-RDM.
+This module provides the CLI commands for uploading research data to Invenio-RDM.
 """
 
 import sys
@@ -56,10 +56,13 @@ from . import __version__
 @click.version_option(version=__version__)
 def cli():
     """
-    AE Uploader - CLI tool for uploading CFD data to Invenio-RDM.
+    AE Uploader - CLI tool for uploading research data to Invenio-RDM.
     
     This tool validates metadata against a JSON schema and uploads
     datasets with their metadata to an Invenio-RDM repository.
+    
+    Supports fluid mechanics and structural mechanics
+    data from the Department of Aeronautics.
     """
     pass
 
@@ -220,18 +223,14 @@ def upload(data_directory: str,
         click.echo(f"[ERROR] Error creating draft: {e}", err=True)
         sys.exit(1)
     
-    # Check directory size and warn for large datasets
+    # Check directory size
     dir_size = _get_directory_size(data_path)
     click.echo(f"\n[INFO] Directory size: {_format_bytes(dir_size)}")
     
-    # Warn about large datasets being zipped
-    size_threshold = 5 * 1024 * 1024 * 1024  # 5 GB
-    if dir_size > size_threshold and not no_zip:
-        click.echo(f"[WARNING] Large dataset detected ({_format_bytes(dir_size)})")
-        click.echo("   Creating a zip file of this size may consume significant disk space.")
-        if not click.confirm('Continue with zipping? (Choose No to upload files individually)', default=True):
-            no_zip = True
-            click.echo("[INFO] Switched to individual file upload mode")
+    # Default to individual file upload (matching legacy script behavior)
+    # Only use zip for very large datasets where it's explicitly beneficial
+    if not no_zip:
+        no_zip = True  # Default to individual files
     
     # Upload files
     click.echo(f"\n[INFO] Uploading files from {data_path}...")
@@ -271,7 +270,7 @@ def upload(data_directory: str,
               help='Path to custom JSON schema file')
 def validate(metadata_file: str, verbose: bool, schema: Optional[str]):
     """
-    Validate a metadata JSON file against the CFD schema.
+    Validate a metadata JSON file against the schema.
     
     Example:
         ae-upload validate metadata.json

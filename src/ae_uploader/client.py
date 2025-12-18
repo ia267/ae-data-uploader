@@ -144,11 +144,6 @@ class InvenioClient:
             For large datasets (>5GB), this may require significant disk space.
             Consider using create_zip=False for very large datasets.
         """
-        Warning:
-            When create_zip=True, a temporary zip file is created in the system temp directory.
-            For large datasets (>5GB), this may require significant disk space.
-            Consider using create_zip=False for very large datasets.
-        """
         dir_path = Path(directory)
         if not dir_path.exists():
             raise FileNotFoundError(f"Directory not found: {directory}")
@@ -161,10 +156,11 @@ class InvenioClient:
                 zip_path = tmp.name
             
             try:
-                # Create zip archive
+                # Create zip archive, excluding metadata files
+                excluded_files = {'metadata.json', '.uploadignore'}
                 with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                     for file_path in dir_path.rglob('*'):
-                        if file_path.is_file():
+                        if file_path.is_file() and file_path.name not in excluded_files and not file_path.name.startswith('.'):
                             # Add file with relative path
                             arcname = file_path.relative_to(dir_path)
                             zipf.write(file_path, arcname)
@@ -181,8 +177,10 @@ class InvenioClient:
         
         else:
             # Upload files individually
+            # Skip metadata.json and hidden files
+            excluded_files = {'metadata.json', '.uploadignore'}
             for file_path in dir_path.rglob('*'):
-                if file_path.is_file():
+                if file_path.is_file() and file_path.name not in excluded_files and not file_path.name.startswith('.'):
                     result = self.upload_file(draft_id, str(file_path))
                     uploaded_files.append(result)
         
@@ -248,9 +246,19 @@ class InvenioClient:
         
         # Add domain-specific custom fields
         if "domain" in metadata:
-            invenio_metadata["custom_fields"] = {
-                self.custom_field_namespace: metadata["domain"]
-            }
+            # Import conversion function
+            try:
+                from ae_uploader.schemas.domain import to_invenio_custom_fields
+                # Convert nested domain structure to flattened Invenio format
+                invenio_metadata["custom_fields"] = to_invenio_custom_fields(
+                    metadata["domain"], 
+                    namespace=self.custom_field_namespace
+                )
+            except ImportError:
+                # Fallback: wrap in namespace (legacy behavior)
+                invenio_metadata["custom_fields"] = {
+                    self.custom_field_namespace: metadata["domain"]
+                }
         
         # Enable files if observations contain file metadata
         if "domain" in metadata and "observations" in metadata["domain"]:
