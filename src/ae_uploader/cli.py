@@ -86,6 +86,8 @@ def cli():
               help='Save credentials to .env file in current directory')
 @click.option('--schema', '-s', type=click.Path(exists=True),
               help='Path to custom JSON schema file')
+@click.option('--insecure', is_flag=True, help='Disable SSL verification (not recommended)')
+
 def upload(data_directory: str, 
            token: Optional[str],
            url: Optional[str],
@@ -95,7 +97,8 @@ def upload(data_directory: str,
            draft_only: bool,
            env_file: Optional[str],
            save_credentials: bool,
-           schema: Optional[str]):
+           schema: Optional[str],
+           insecure: bool):
     """
     Upload a dataset directory to Invenio-RDM.
     
@@ -125,7 +128,11 @@ def upload(data_directory: str,
     if not url:
         url = click.prompt('Invenio-RDM instance URL', 
                           type=str,
-                          default='https://your-invenio.org')
+                          default='https://data.ae.ic.ac.uk')
+
+    url = url.rstrip('/')
+    if url.endswith('/api'):
+        url = url[:-4]
     
     # Prompt for token if not provided (hide input for security)
     if not token:
@@ -205,6 +212,11 @@ def upload(data_directory: str,
     # Initialize Invenio client
     click.echo(f"\n[INFO] Connecting to {url}...")
     client = InvenioClient(url, token, namespace)
+
+    # Apply the insecure flag
+    if insecure:
+        client.session.verify = False
+        click.echo("[WARNING] SSL verification is disabled. This is not recommended.", err=True)
     
     if not client.test_connection():
         click.echo("[ERROR] Cannot connect to Invenio instance", err=True)
@@ -482,7 +494,8 @@ def info():
 
 
 @cli.command()
-def configure():
+@click.option('--insecure', is_flag=True, help='Disable SSL verification (not recommended)')
+def configure(insecure: bool):
     """
     Configure Invenio-RDM credentials interactively.
     
@@ -491,6 +504,7 @@ def configure():
     
     Example:
         ae-upload configure
+        ae-upload configure --insecure
     """
     click.echo("=" * 50)
     click.echo("Invenio-RDM Credentials Setup")
@@ -506,11 +520,13 @@ def configure():
     
     # Prompt for URL
     click.echo("\nStep 1: Invenio-RDM Instance URL")
-    click.echo("  Example: https://invenio.example.org")
+    click.echo("  Example: https://data.ae.ic.ac.uk")
     url = click.prompt('\nEnter URL', type=str)
     
     # Clean up URL
     url = url.rstrip('/')
+    if url.endswith('/api'):
+        url = url[:-4]
     
     # Prompt for token
     click.echo("\nStep 2: Access Token")
@@ -536,10 +552,21 @@ def configure():
     click.echo("\n[INFO] Testing connection...")
     try:
         client = InvenioClient(url, token, namespace)
-        if client.test_connection():
-            click.echo("[OK] Connection successful!")
-        else:
-            click.echo("[WARNING] Could not verify connection, but credentials will be saved.")
+
+        if insecure:
+            client.session.verify = False
+            click.echo("[WARNING] SSL verification disabled for connection test")
+        try:
+            resp = client.session.get(f"{client.base_url}/api/records")
+            if resp.status_code in [200, 403]:
+                click.echo("[OK] Connection successful!")
+            else:
+                click.echo(f"[WARNING] Server returned status code: {resp.status_code}")
+                click.echo("Check that your URL is correct (should be the base URL, not /api)")
+        except Exception as e:
+            click.echo(f"[WARNING] Connection failed: {e}")
+            click.echo("Check your network connection and URL typo.")
+
     except Exception as e:
         click.echo(f"[WARNING] Connection test failed: {e}")
         if not click.confirm('\nSave credentials anyway?', default=True):

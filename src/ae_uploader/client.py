@@ -23,7 +23,7 @@ class InvenioClient:
         Initialize the Invenio client.
         
         Args:
-            base_url: Base URL of the Invenio-RDM instance (e.g., https://your-invenio.org)
+            base_url: Base URL of the Invenio-RDM instance (e.g., https://data.ae.ic.ac.uk)
             access_token: Personal access token for authentication
             custom_field_namespace: Namespace for custom fields in Invenio (default: "domain")
                                    Must match the configuration in your Invenio instance
@@ -32,9 +32,11 @@ class InvenioClient:
         self.access_token = access_token
         self.custom_field_namespace = custom_field_namespace
         self.session = requests.Session()
+        self.session.verify = True
         self.session.headers.update({
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
+            'User-Agent': 'ae-uploader/1.0 (Imperial College London)'
         })
     
     def test_connection(self) -> bool:
