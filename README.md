@@ -603,23 +603,3 @@ Common issues:
 ## License
 
 MIT License - see LICENSE file for details.
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## Support
-
-For issues and questions:
-- GitHub Issues: https://github.com/yourusername/ae-uploader/issues
-- Email: irufan.ahmed@gmail.com
-
-## Acknowledgments
-
-Built for the AE Research Team to streamline fluid dynamics data management and sharing.
