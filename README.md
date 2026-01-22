@@ -20,18 +20,31 @@ Designed for the Department of Aeronautics at Imperial College London, this tool
 
 ## Installation
 
-### Install from GitHub
+### Prerequisites
+
+- SSH keys configured for github.ic.ac.uk (see [GitHub Enterprise SSH setup](https://docs.github.com/en/authentication/connecting-to-github-with-ssh))
+
+### Option 1: Local Install (Recommended)
+
+Clone the repository and install locally:
 
 ```bash
-pip install git+https://github.ic.ac.uk/aeronautics/ae-data-uploader.git
-```
-
-### Development Install (Local)
-
-```bash
+git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
 pip install -e .
 ```
+
+The `-e` flag installs in editable mode, useful for development.
+
+### Option 2: Direct Install from GitHub
+
+For direct installation without cloning:
+
+```bash
+pip install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
+```
+
+**Important:** HTTPS methods (`https://github.ic.ac.uk/...` or `git+https://...`) will hang indefinitely due to authentication requirements. Always use SSH.
 
 ## Quick Start
 

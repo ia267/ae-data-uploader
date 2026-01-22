@@ -6,10 +6,45 @@ The AE Uploader is now configured with your fluid dynamics domain schema support
 
 ## Installation
 
+### Prerequisites
+
+- Python 3.8 or higher
+- Git (for cloning the repository)
+- **SSH keys configured for github.ic.ac.uk** - Required for authentication
+  - See [GitHub SSH setup guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
+
+### Install Steps
+
+1. **Clone the repository (using SSH):**
+
 ```bash
+git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
+```
+
+2. **Install the package:**
+
+```bash
 pip install -e .
 ```
+
+The `-e` flag installs in editable/development mode, so changes to the source code are immediately reflected without reinstalling.
+
+### Alternative: Direct Install via SSH
+
+Skip cloning and install directly:
+
+```bash
+pip install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
+```
+
+### Troubleshooting
+
+**If git clone or pip install hangs:**
+- You're likely using HTTPS instead of SSH
+- HTTPS authentication prompts cause indefinite hangs
+- Solution: Use SSH URLs (`git@github.ic.ac.uk:...`) as shown above
+- Verify SSH access: `ssh -T git@github.ic.ac.uk`
 
 ## Quick Test
 
