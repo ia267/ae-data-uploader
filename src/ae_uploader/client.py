@@ -35,7 +35,7 @@ class InvenioClient:
         self.session.verify = True
         self.session.headers.update({
             'Authorization': f'Bearer {access_token}',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
             'User-Agent': 'ae-uploader/1.0 (Imperial College London)'
         })
     
