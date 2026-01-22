@@ -42,6 +42,32 @@ class InvenioClient:
         # Auto-detect if we need /api prefix (production with HAProxy) or not (local dev)
         self._api_prefix = self._detect_api_prefix()
     
+    def _detect_api_prefix(self) -> str:
+        """
+        Auto-detect if the Invenio instance uses /api prefix or not.
+        
+        Production instances with HAProxy use /api, local dev instances don't.
+        
+        Returns:
+            "/api" or "" depending on instance configuration
+        """
+        try:
+            # Try with /api prefix first (production setup)
+            response = self.session.get(f"{self.base_url}/api/records", timeout=5)
+            if response.status_code in [200, 403, 401]:
+                return "/api"
+            
+            # Try without /api prefix (local dev setup)
+            response = self.session.get(f"{self.base_url}/records", timeout=5)
+            if response.status_code in [200, 403, 401]:
+                return ""
+            
+            # Default to /api if both fail
+            return "/api"
+        except RequestException:
+            # Default to /api if detection fails
+            return "/api"
+    
     def test_connection(self) -> bool:
         """
         Test connection to Invenio-RDM instance.
@@ -50,7 +76,7 @@ class InvenioClient:
             True if connection successful, False otherwise
         """
         try:
-            response = self.session.get(f"{self.base_url}/api/records")
+            response = self.session.get(f"{self.base_url}{self._api_prefix}/records")
             return response.status_code in [200, 403]  # 403 means auth is working
         except RequestException:
             return False
