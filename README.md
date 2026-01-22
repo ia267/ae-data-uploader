@@ -20,17 +20,17 @@ Designed for the Department of Aeronautics at Imperial College London, this tool
 
 ## Installation
 
-### Quick Install (Development Mode)
+### Install from GitHub
+
+```bash
+pip install git+https://github.ic.ac.uk/aeronautics/ae-data-uploader.git
+```
+
+### Development Install (Local)
 
 ```bash
 cd ae-data-uploader
 pip install -e .
-```
-
-### Standard Install
-
-```bash
-pip install ae-uploader
 ```
 
 ## Quick Start
