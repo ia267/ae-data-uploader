@@ -38,35 +38,6 @@ class InvenioClient:
             'Content-Type': 'application/json',
             'User-Agent': 'ae-uploader/1.0 (Imperial College London)'
         })
-        
-        # Auto-detect if we need /api prefix (production with HAProxy) or not (local dev)
-        self._api_prefix = self._detect_api_prefix()
-    
-    def _detect_api_prefix(self) -> str:
-        """
-        Auto-detect if the Invenio instance uses /api prefix or not.
-        
-        Production instances with HAProxy use /api, local dev instances don't.
-        
-        Returns:
-            "/api" or "" depending on instance configuration
-        """
-        try:
-            # Try with /api prefix first (production setup)
-            response = self.session.get(f"{self.base_url}/api/records", timeout=5)
-            if response.status_code in [200, 403, 401]:
-                return "/api"
-            
-            # Try without /api prefix (local dev setup)
-            response = self.session.get(f"{self.base_url}/records", timeout=5)
-            if response.status_code in [200, 403, 401]:
-                return ""
-            
-            # Default to /api if both fail
-            return "/api"
-        except RequestException:
-            # Default to /api if detection fails
-            return "/api"
     
     def test_connection(self) -> bool:
         """
@@ -76,7 +47,7 @@ class InvenioClient:
             True if connection successful, False otherwise
         """
         try:
-            response = self.session.get(f"{self.base_url}{self._api_prefix}/records")
+            response = self.session.get(f"{self.base_url}/api/records")
             return response.status_code in [200, 403]  # 403 means auth is working
         except RequestException:
             return False
@@ -97,7 +68,7 @@ class InvenioClient:
         # Transform metadata to Invenio format
         invenio_metadata = self._transform_to_invenio_format(metadata)
         
-        url = f"{self.base_url}{self._api_prefix}/records"
+        url = f"{self.base_url}/api/records"
         
         response = self.session.post(url, json=invenio_metadata)
         response.raise_for_status()
@@ -128,7 +99,7 @@ class InvenioClient:
             filename = file_path.name
         
         # Start file upload
-        url = f"{self.base_url}{self._api_prefix}/records/{draft_id}/draft/files"
+        url = f"{self.base_url}/api/records/{draft_id}/draft/files"
         
         # Initialize file
         init_response = self.session.post(
@@ -230,7 +201,7 @@ class InvenioClient:
         Raises:
             RequestException: If API request fails
         """
-        url = f"{self.base_url}{self._api_prefix}/records/{draft_id}/draft/actions/publish"
+        url = f"{self.base_url}/api/records/{draft_id}/draft/actions/publish"
         
         response = self.session.post(url)
         response.raise_for_status()
@@ -310,7 +281,7 @@ class InvenioClient:
         Returns:
             Dictionary containing record information
         """
-        url = f"{self.base_url}{self._api_prefix}/records/{record_id}"
+        url = f"{self.base_url}/api/records/{record_id}"
         response = self.session.get(url)
         response.raise_for_status()
         return response.json()
