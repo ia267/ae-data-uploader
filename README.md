@@ -1,6 +1,6 @@
 # AE Uploader
 
-A Python CLI tool for uploading aeronautics research data to Invenio-RDM repositories with comprehensive metadata validation.
+A Python CLI tool for uploading aeronautics research data to InvenioRDM repositories with comprehensive metadata validation.
 
 Designed for the Department of Aeronautics at Imperial College London, this tool supports:
 - **Fluid Mechanics**: CFD simulations and experimental flow measurements
@@ -8,16 +8,15 @@ Designed for the Department of Aeronautics at Imperial College London, this tool
 
 ## Features
 
-**Metadata Validation**: Validates metadata against a strict JSON schema before upload  
-**Custom Schema Support**: Export and modify schemas for institutional requirements  
-**Multi-Discipline Support**: Fluid mechanics and structural mechanics disciplines  
-**Numerical & Experimental**: Handles both numerical simulations and experimental observations  
-**Department-Wide**: Designed for all aeronautics research data at Imperial College London  
-**Smart Packaging**: Automatically zips directories or uploads files individually  
-**Direct Upload**: Seamless integration with Invenio-RDM API  
-**CLI Interface**: Simple command-line interface for quick operations  
-**Template Generation**: Create metadata templates for numerical or experimental data  
-**Web Form Option**: Browser-based form for metadata generation
+- Metadata Validation: Validates metadata against a strict JSON schema before upload  
+- Custom Schema Support: Export and modify schemas for institutional requirements  
+- Multi-Discipline Support: Fluid mechanics and structural mechanics disciplines  
+- Department-Wide: Designed for all aeronautics research data at Imperial College London  
+- Smart Packaging: Automatically zips directories or uploads files individually  
+- Direct Upload: Seamless integration with InvenioRDM API  
+- CLI Interface: Simple command-line interface for quick operations  
+- Template Generation: Create metadata templates for numerical or experimental data  
+- Web Form Option: Browser-based form for metadata generation
 
 ## Installation
 
@@ -45,7 +44,7 @@ ae-upload configure
 ```
 
 This will:
-- Prompt for your Invenio-RDM instance URL
+- Prompt for your InvenioRDM instance URL
 - Prompt for your access token (input hidden)
 - Test the connection
 - Save credentials to `.env` file
@@ -137,7 +136,7 @@ ae-upload upload ./my_data_directory
 The tool will:
 1. Find `metadata.json` in the directory
 2. Validate against the schema
-3. Create a draft in Invenio-RDM
+3. Create a draft in InvenioRDM
 4. Upload all files as a zip archive
 5. Publish the record
 
@@ -145,7 +144,7 @@ The tool will:
 
 ### `configure`
 
-Set up Invenio-RDM credentials interactively.
+Set up InvenioRDM credentials interactively.
 
 ```bash
 ae-upload configure
@@ -162,10 +161,10 @@ This command will:
 ```bash
 $ ae-upload configure
 ==================================================
-Invenio-RDM Credentials Setup
+InvenioRDM Credentials Setup
 ==================================================
 
-Step 1: Invenio-RDM Instance URL
+Step 1: InvenioRDM Instance URL
   Example: https://invenio.example.org
 
 Enter URL: https://my-invenio.org
@@ -184,7 +183,7 @@ Confirm access token: ********
 
 ### `upload`
 
-Upload a dataset directory to Invenio-RDM.
+Upload a dataset directory to InvenioRDM.
 
 ```bash
 ae-upload upload <data_directory> [OPTIONS]
@@ -470,7 +469,7 @@ ae-data-uploader/
 
 The uploader stores domain-specific metadata in Invenio's `custom_fields` section. By default, it uses the namespace `domain`, but this can be customized if your Invenio instance uses a different namespace.
 
-**Important:** Your Invenio-RDM instance must have this custom field configured. Contact your Invenio administrator to ensure the namespace is registered in `invenio.cfg`:
+**Important:** Your InvenioRDM instance must have this custom field configured. Contact your Invenio administrator to ensure the namespace is registered in `invenio.cfg`:
 
 ```python
 from invenio_records_resources.services.custom_fields import CustomField
