@@ -90,16 +90,24 @@ This creates a `metadata.json` file with the required structure.
 
 **Option B: Web Form (Browser)**
 
-Open `web/metadata_form.html` in your browser for a user-friendly form:
+First, export the HTML form to your current directory:
 
 ```bash
-firefox web/metadata_form.html
+ae-upload export-form
+```
+
+Then open it in your browser:
+
+```bash
+firefox metadata_form.html
 # or open in any browser
 ```
 
 Fill out the form, click "Download metadata.json", and save it to your data folder.
 
-See [web/README.md](web/README.md) for detailed instructions.
+**Note:** If you cloned the repository, you can also access the form directly at `web/metadata_form.html` without exporting it.
+
+See [web/README.md](web/README.md) for detailed form instructions.
 
 ### 3. Edit Your Metadata
 
@@ -303,6 +311,34 @@ ae-upload schema --output my_schema.json
 ```
 
 **Use Case:** Export the default schema, modify it to add custom fields or constraints specific to your Invenio instance, then use it for validation and upload.
+
+### `export-form`
+
+Export the web-based metadata form.
+
+```bash
+ae-upload export-form [OPTIONS]
+
+Options:
+  --output, -o PATH    Output file path (default: metadata_form.html)
+```
+
+**Examples:**
+
+```bash
+# Export form to current directory
+ae-upload export-form
+
+# Export to custom location
+ae-upload export-form --output ~/forms/metadata_form.html
+```
+
+**Use Case:** Export the HTML form for creating metadata.json files through a user-friendly browser interface. The form runs entirely client-side (no server needed) and generates downloadable JSON files.
+
+After exporting, open in any browser:
+```bash
+firefox metadata_form.html
+```
 
 ### `info`
 
@@ -568,6 +604,69 @@ with open('my_schema.json') as f:
 # Validate against custom schema
 is_valid, errors = validate_metadata(metadata, schema=custom_schema)
 ```
+
+## Security Considerations
+
+### Credential Storage
+
+The tool saves credentials to a `.env` file for convenience. While this is acceptable for development and personal use, be aware:
+
+**Current safeguards:**
+- `.env` is automatically added to `.gitignore` to prevent commits
+- File permissions are set to `600` (owner read/write only)
+- Credentials are stored in plain text locally
+
+**Best practices:**
+
+1. Never commit credentials:
+   ```bash
+   # Verify .env is gitignored
+   git check-ignore .env  # Should return: .env
+   ```
+
+2. Check file permissions:
+   ```bash
+   ls -la .env  # Should show: -rw------- (600)
+   ```
+
+3. For production/shared systems:
+   - Use environment variables instead of `.env` files
+   - Use proper secret management (HashiCorp Vault, AWS Secrets Manager, etc.)
+   - Consider using IAM roles or service accounts
+   
+4. Token management:
+   - Create tokens with minimum required permissions
+   - Set token expiration dates
+   - Rotate tokens regularly
+   - Revoke tokens when no longer needed
+
+5. Alternative approaches:
+   ```bash
+   # Don't save credentials, pass them per command
+   ae-upload upload ./data --token "$TOKEN" --url "$URL"
+   
+   # Use environment variables
+   export INVENIO_TOKEN="your_token"
+   export INVENIO_URL="https://your-instance.org"
+   ae-upload upload ./data
+   ```
+
+6. Secure your workstation:
+   - Use full disk encryption
+   - Lock your screen when away
+   - Be cautious on shared systems
+
+**When to avoid .env files:**
+- Production servers
+- Shared/multi-user systems
+- CI/CD pipelines (use CI secrets instead)
+- Public or untrusted environments
+
+**Safe usage contexts:**
+- Personal workstation
+- Development environments
+- Single-user systems
+- When proper file system permissions are enforced
 
 ## Troubleshooting
 

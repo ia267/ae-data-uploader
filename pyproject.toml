@@ -55,4 +55,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-ae_uploader = ["schemas/*.json"]
+ae_uploader = ["schemas/*.json", "web/*.html"]
+
+[tool.setuptools.exclude-package-data]
+ae_uploader = ["web/README.md"]

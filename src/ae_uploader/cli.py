@@ -8,6 +8,8 @@ import sys
 import os
 import stat
 import json
+import shutil
+import pkg_resources
 from pathlib import Path
 from typing import Optional
 
@@ -579,6 +581,37 @@ def configure(insecure: bool):
     click.echo("\nYou can now run commands without --token and --url options:")
     click.echo("  ae-upload generate numerical")
     click.echo("  ae-upload upload ./my_data")
+
+
+@cli.command()
+@click.option('--output', '-o', default='metadata_form.html',
+              help='Output file path')
+def export_form(output: str):
+    """
+    Export the web-based metadata form.
+    
+    Exports the HTML form for creating metadata.json files in a web browser.
+    The form runs entirely client-side and generates downloadable metadata files.
+    """
+    output_path = Path(output)
+    
+    try:
+        # Get the HTML file from package data
+        form_html = pkg_resources.resource_string('ae_uploader', 'web/metadata_form.html').decode('utf-8')
+        
+        # Write to output file
+        with open(output_path, 'w') as f:
+            f.write(form_html)
+        
+        click.echo(f"[OK] Metadata form exported to: {output_path.absolute()}")
+        click.echo(f"\nTo use the form:")
+        click.echo(f"  firefox {output_path.name}")
+        click.echo(f"  # or open in any web browser")
+        click.echo(f"\nThe form runs entirely in the browser (no server needed).")
+        
+    except Exception as e:
+        click.echo(f"[ERROR] Failed to export form: {e}", err=True)
+        sys.exit(1)
 
 
 def main():
