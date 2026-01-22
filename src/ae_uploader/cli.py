@@ -9,9 +9,12 @@ import os
 import stat
 import json
 import shutil
-import pkg_resources
 from pathlib import Path
 from typing import Optional
+try:
+    from importlib.resources import files
+except ImportError:
+    from importlib_resources import files
 
 import click
 from dotenv import load_dotenv
@@ -597,7 +600,8 @@ def export_form(output: str):
     
     try:
         # Get the HTML file from package data
-        form_html = pkg_resources.resource_string('ae_uploader', 'web/metadata_form.html').decode('utf-8')
+        form_file = files('ae_uploader').joinpath('web/metadata_form.html')
+        form_html = form_file.read_text(encoding='utf-8')
         
         # Write to output file
         with open(output_path, 'w') as f:
