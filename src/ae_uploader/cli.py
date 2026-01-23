@@ -243,7 +243,14 @@ def upload(data_path: str,
     # Create draft
     click.echo("\n[INFO] Creating draft record...")
     try:
-      Upload files
+        draft = client.create_draft(metadata_dict)
+        draft_id = draft['id']
+        click.echo(f"[OK] Draft created with ID: {draft_id}")
+    except Exception as e:
+        click.echo(f"[ERROR] Error creating draft: {e}", err=True)
+        sys.exit(1)
+    
+    # Upload files
     if is_single_file:
         # Single file upload
         file_size = path.stat().st_size
@@ -275,14 +282,7 @@ def upload(data_path: str,
             click.echo(f"[OK] Uploaded {len(uploaded)} file(s)")
         except Exception as e:
             click.echo(f"[ERROR] Error uploading files: {e}", err=True)
-                draft_id, 
-            str(data_path),
-            create_zip=not no_zip
-        )
-        click.echo(f"[OK] Uploaded {len(uploaded)} file(s)")
-    except Exception as e:
-        click.echo(f"[ERROR] Error uploading files: {e}", err=True)
-        sys.exit(1)
+            sys.exit(1)
     
     # Publish or keep as draft
     if draft_only:
