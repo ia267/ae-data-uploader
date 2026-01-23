@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 
 from .validate import validate_metadata_file, validate_with_hints, ValidationError, load_schema
 from .client import InvenioClient, create_client_from_env
+from .indexer import IndexGenerator, MultiFileIndexGenerator, save_index
 
 
 def _get_directory_size(directory: Path) -> int:
@@ -92,6 +93,10 @@ def cli():
 @click.option('--schema', '-s', type=click.Path(exists=True),
               help='Path to custom JSON schema file')
 @click.option('--insecure', is_flag=True, help='Disable SSL verification (not recommended)')
+@click.option('--auto-index', is_flag=True,
+              help='Automatically generate and upload byte-offset index for selective downloads')
+@click.option('--index-pattern', 
+              help='Glob pattern for multi-file indexing (e.g., "*.h5") - used with --auto-index')
 
 def upload(data_path: str, 
            token: Optional[str],
@@ -103,7 +108,9 @@ def upload(data_path: str,
            env_file: Optional[str],
            save_credentials: bool,
            schema: Optional[str],
-           insecure: bool):
+           insecure: bool,
+           auto_index: bool,
+           index_pattern: Optional[str]):
     """
     Upload a file or directory to Invenio-RDM.
     
@@ -250,6 +257,39 @@ def upload(data_path: str,
         click.echo(f"[ERROR] Error creating draft: {e}", err=True)
         sys.exit(1)
     
+    # Generate index if requested
+    index_file = None
+    if auto_index:
+        click.echo("\n[INFO] Generating byte-offset index...")
+        try:
+            if is_single_file:
+                # Generate index for single file
+                index_file = path.parent / f"{path.stem}_index.json"
+                index = IndexGenerator.generate(path)
+                save_index(index, index_file)
+                click.echo(f"[OK] Index generated: {index_file.name}")
+                click.echo(f"  Index size: {_format_bytes(index_file.stat().st_size)}")
+            else:
+                # Generate master index for directory
+                index_file = path / f"{path.name}_index.json"
+                master_index = MultiFileIndexGenerator.generate_master_index(
+                    path,
+                    pattern=index_pattern,
+                    strategy='master'
+                )
+                save_index(master_index, index_file)
+                click.echo(f"[OK] Master index generated: {index_file.name}")
+                click.echo(f"  Total files indexed: {master_index['total_files']}")
+                click.echo(f"  Index size: {_format_bytes(index_file.stat().st_size)}")
+        except ImportError as e:
+            click.echo(f"[WARNING] Could not generate index: {e}", err=True)
+            click.echo("[WARNING] Continuing without index...", err=True)
+            auto_index = False
+        except Exception as e:
+            click.echo(f"[WARNING] Index generation failed: {e}", err=True)
+            click.echo("[WARNING] Continuing without index...", err=True)
+            auto_index = False
+    
     # Upload files
     if is_single_file:
         # Single file upload
@@ -259,6 +299,12 @@ def upload(data_path: str,
         try:
             uploaded = client.upload_file(draft_id, str(path))
             click.echo(f"[OK] Uploaded 1 file")
+            
+            # Upload index if generated
+            if auto_index and index_file and index_file.exists():
+                click.echo(f"[INFO] Uploading index file...")
+                client.upload_file(draft_id, str(index_file))
+                click.echo(f"[OK] Uploaded index file: {index_file.name}")
         except Exception as e:
             click.echo(f"[ERROR] Error uploading file: {e}", err=True)
             sys.exit(1)
@@ -280,6 +326,14 @@ def upload(data_path: str,
                 create_zip=not no_zip
             )
             click.echo(f"[OK] Uploaded {len(uploaded)} file(s)")
+            
+            # Upload index if generated and not already in directory
+            if auto_index and index_file and index_file.exists():
+                # Check if index was already uploaded as part of directory
+                if not any(f.get('key', '').endswith('_index.json') for f in uploaded):
+                    click.echo(f"[INFO] Uploading index file...")
+                    client.upload_file(draft_id, str(index_file))
+                    click.echo(f"[OK] Uploaded index file: {index_file.name}")
         except Exception as e:
             click.echo(f"[ERROR] Error uploading files: {e}", err=True)
             sys.exit(1)
@@ -288,6 +342,8 @@ def upload(data_path: str,
     if draft_only:
         click.echo(f"\n[OK] Draft created successfully!")
         click.echo(f"   View at: {url}/uploads/{draft_id}")
+        if auto_index:
+            click.echo(f"   ✨ Byte-offset index included for selective downloads")
     else:
         click.echo("\n[INFO] Publishing record...")
         try:
@@ -296,6 +352,8 @@ def upload(data_path: str,
             click.echo("[OK] Record published successfully!")
             click.echo(f"   DOI: {record.get('doi', 'Pending')}")
             click.echo(f"   View at: {url}/records/{record_id}")
+            if auto_index:
+                click.echo(f"   ✨ Byte-offset index included for selective downloads")
         except Exception as e:
             click.echo(f"[ERROR] Error publishing record: {e}", err=True)
             click.echo(f"   Draft saved at: {url}/uploads/{draft_id}", err=True)
@@ -482,6 +540,122 @@ def schema(output: str):
     click.echo(f"[OK] Schema exported to: {output}")
     click.echo(f"  You can modify this file and use it with:")
     click.echo(f"  ae-upload upload ... --schema {output}")
+
+
+@cli.command()
+@click.argument('file_or_directory', type=click.Path(exists=True))
+@click.option('--output', '-o', type=click.Path(),
+              help='Output index file path (default: <filename>_index.json)')
+@click.option('--file-type', '-t', 
+              type=click.Choice(['hdf5', 'csv', 'netcdf', 'binary', 'auto'], case_sensitive=False),
+              default='auto',
+              help='File type (default: auto-detect from extension)')
+@click.option('--pattern', '-p',
+              help='Glob pattern for multi-file index (e.g., "*.h5", "sim_*.nc")')
+@click.option('--strategy', '-s',
+              type=click.Choice(['master', 'hierarchical'], case_sensitive=False),
+              default='master',
+              help='Multi-file index strategy (default: master)')
+def generate_index(file_or_directory: str, 
+                   output: Optional[str],
+                   file_type: str,
+                   pattern: Optional[str],
+                   strategy: str):
+    """
+    Generate byte-offset index for selective downloading.
+    
+    Supports HDF5, CSV, NetCDF, and binary files. The index enables users to
+    download specific portions of large files using HTTP Range requests.
+    
+    Examples:
+        # Single HDF5 file
+        ae-upload generate-index data.h5
+        
+        # Single CSV file with custom output
+        ae-upload generate-index data.csv --output my_index.json
+        
+        # Multiple files (creates master index)
+        ae-upload generate-index ./simulation_data --pattern "*.h5"
+        
+        # Hierarchical index for large datasets
+        ae-upload generate-index ./data --strategy hierarchical
+    """
+    path = Path(file_or_directory)
+    
+    try:
+        if path.is_file():
+            # Single file index
+            click.echo(f"[INFO] Generating index for {path.name}...")
+            
+            # Auto-detect or use specified type
+            ftype = None if file_type == 'auto' else file_type
+            
+            index = IndexGenerator.generate(path, file_type=ftype)
+            
+            # Determine output path
+            if output is None:
+                output = path.parent / f"{path.stem}_index.json"
+            else:
+                output = Path(output)
+            
+            # Save index
+            save_index(index, output)
+            
+            click.echo(f"[OK] Index created: {output}")
+            click.echo(f"  File type: {index['file_type']}")
+            click.echo(f"  Index size: {_format_bytes(output.stat().st_size)}")
+            click.echo(f"  Data size: {_format_bytes(index['file_size'])}")
+            
+            if 'datasets' in index:
+                click.echo(f"  Datasets: {len(index['datasets'])}")
+            elif 'variables' in index:
+                click.echo(f"  Variables: {len(index['variables'])}")
+            elif 'chunks' in index:
+                click.echo(f"  Chunks: {index.get('total_chunks', 'N/A')}")
+            
+        elif path.is_dir():
+            # Multi-file index
+            click.echo(f"[INFO] Generating {strategy} index for directory: {path.name}")
+            
+            if pattern:
+                click.echo(f"[INFO] Pattern: {pattern}")
+            
+            master_index = MultiFileIndexGenerator.generate_master_index(
+                path,
+                pattern=pattern,
+                strategy=strategy
+            )
+            
+            # Determine output path
+            if output is None:
+                output = path / f"{path.name}_index.json"
+            else:
+                output = Path(output)
+            
+            # Save index
+            save_index(master_index, output)
+            
+            click.echo(f"[OK] Index created: {output}")
+            click.echo(f"  Strategy: {strategy}")
+            click.echo(f"  Total files: {master_index['total_files']}")
+            click.echo(f"  Index size: {_format_bytes(output.stat().st_size)}")
+            click.echo(f"  Total data size: {_format_bytes(master_index['total_size'])}")
+            
+        else:
+            click.echo(f"[ERROR] Path is neither file nor directory: {path}", err=True)
+            sys.exit(1)
+            
+    except ImportError as e:
+        click.echo(f"[ERROR] {e}", err=True)
+        click.echo("\n[HINT] Install required library:", err=True)
+        if 'h5py' in str(e):
+            click.echo("  pip install h5py", err=True)
+        elif 'netCDF4' in str(e):
+            click.echo("  pip install netCDF4", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"[ERROR] Failed to generate index: {e}", err=True)
+        sys.exit(1)
 
 
 @cli.command()
