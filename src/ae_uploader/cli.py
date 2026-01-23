@@ -73,16 +73,16 @@ def cli():
 
 
 @cli.command()
-@click.argument('data_directory', type=click.Path(exists=True))
+@click.argument('data_path', type=click.Path(exists=True))
 @click.option('--token', '-t', help='Invenio access token', envvar='INVENIO_TOKEN')
 @click.option('--url', '-u', help='Invenio base URL', envvar='INVENIO_URL')
 @click.option('--namespace', '-n', help='Custom field namespace', 
               envvar='CUSTOM_FIELD_NAMESPACE', default='domain')
 @click.option('--metadata', '-m', 
               type=click.Path(exists=True),
-              help='Path to metadata.json (default: looks in data_directory)')
+              help='Path to metadata.json (default: looks in data_path parent directory)')
 @click.option('--no-zip', is_flag=True, 
-              help='Upload files individually instead of as a zip archive')
+              help='Upload files individually instead of as a zip archive (directories only)')
 @click.option('--draft-only', is_flag=True,
               help='Create draft but do not publish')
 @click.option('--env-file', type=click.Path(exists=True),
@@ -93,7 +93,7 @@ def cli():
               help='Path to custom JSON schema file')
 @click.option('--insecure', is_flag=True, help='Disable SSL verification (not recommended)')
 
-def upload(data_directory: str, 
+def upload(data_path: str, 
            token: Optional[str],
            url: Optional[str],
            namespace: str,
@@ -105,16 +105,19 @@ def upload(data_directory: str,
            schema: Optional[str],
            insecure: bool):
     """
-    Upload a dataset directory to Invenio-RDM.
+    Upload a file or directory to Invenio-RDM.
     
-    Example:
+    DATA_PATH can be either a single file or a directory containing multiple files.
+    
+    Examples:
+        ae-upload upload ./data.h5 --metadata metadata.json
         ae-upload upload ./my_simulation_data --token YOUR_TOKEN --url https://invenio.example.org
         
     The command will:
-    1. Look for metadata.json in the data directory
-    2. Validate the metadata against the CFD schema
+    1. Look for metadata.json (in the same directory or specified via --metadata)
+    2. Validate the metadata against the schema
     3. Create a draft record in Invenio-RDM
-    4. Upload all files from the directory
+    4. Upload the file(s)
     5. Publish the record (unless --draft-only is specified)
     """
     # Load environment file if specified
@@ -157,16 +160,23 @@ def upload(data_directory: str,
             _save_credentials(env_path, url, token, namespace)
             click.echo(f"[OK] Credentials saved to {env_path.absolute()}")
     
-    # Find metadata file
-    data_path = Path(data_directory)
+    # Determine if data_path is a file or directory
+    path = Path(data_path)
+    is_single_file = path.is_file()
     
+    # Find metadata file
     if metadata:
         metadata_path = Path(metadata)
     else:
-        metadata_path = data_path / "metadata.json"
+        # For single files, look in the same directory; for directories, look inside
+        if is_single_file:
+            metadata_path = path.parent / "metadata.json"
+        else:
+            metadata_path = path / "metadata.json"
     
     if not metadata_path.exists():
-        click.echo(f"[ERROR] metadata.json not found in {data_path}", err=True)
+        location = path.parent if is_single_file else path
+        click.echo(f"[ERROR] metadata.json not found in {location}", err=True)
         click.echo("   Use --metadata to specify a different location", err=True)
         sys.exit(1)
     
@@ -233,27 +243,39 @@ def upload(data_directory: str,
     # Create draft
     click.echo("\n[INFO] Creating draft record...")
     try:
-        draft = client.create_draft(metadata_dict)
-        draft_id = draft['id']
-        click.echo(f"[OK] Draft created with ID: {draft_id}")
-    except Exception as e:
-        click.echo(f"[ERROR] Error creating draft: {e}", err=True)
-        sys.exit(1)
-    
-    # Check directory size
-    dir_size = _get_directory_size(data_path)
-    click.echo(f"\n[INFO] Directory size: {_format_bytes(dir_size)}")
-    
-    # Default to individual file upload (matching legacy script behavior)
-    # Only use zip for very large datasets where it's explicitly beneficial
-    if not no_zip:
-        no_zip = True  # Default to individual files
-    
-    # Upload files
-    click.echo(f"\n[INFO] Uploading files from {data_path}...")
-    try:
-        uploaded = client.upload_directory(
-            draft_id, 
+      Upload files
+    if is_single_file:
+        # Single file upload
+        file_size = path.stat().st_size
+        click.echo(f"\n[INFO] File size: {_format_bytes(file_size)}")
+        click.echo(f"[INFO] Uploading file {path.name}...")
+        try:
+            uploaded = client.upload_file(draft_id, str(path))
+            click.echo(f"[OK] Uploaded 1 file")
+        except Exception as e:
+            click.echo(f"[ERROR] Error uploading file: {e}", err=True)
+            sys.exit(1)
+    else:
+        # Directory upload
+        dir_size = _get_directory_size(path)
+        click.echo(f"\n[INFO] Directory size: {_format_bytes(dir_size)}")
+        
+        # Default to individual file upload (matching legacy script behavior)
+        # Only use zip for very large datasets where it's explicitly beneficial
+        if not no_zip:
+            no_zip = True  # Default to individual files
+        
+        click.echo(f"\n[INFO] Uploading files from {path}...")
+        try:
+            uploaded = client.upload_directory(
+                draft_id, 
+                str(path),
+                create_zip=not no_zip
+            )
+            click.echo(f"[OK] Uploaded {len(uploaded)} file(s)")
+        except Exception as e:
+            click.echo(f"[ERROR] Error uploading files: {e}", err=True)
+                draft_id, 
             str(data_path),
             create_zip=not no_zip
         )
