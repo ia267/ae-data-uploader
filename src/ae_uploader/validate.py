@@ -184,7 +184,7 @@ def validate_with_hints(metadata: Dict[str, Any], schema: Dict[str, Any] = None)
         
         if any("field" in err for err in errors):
             hints.append(
-                "Valid fields: jet, boundary_layer, wake, combustion, other"
+                "Valid fields by discipline: fluid_dynamics -> jet, boundary_layer, wake, combustion, other; structures -> aeroelasticity, structural_dynamics, composites, fracture_fatigue, other"
             )
         
         if any("observation_type" in err for err in errors):
@@ -195,6 +195,14 @@ def validate_with_hints(metadata: Dict[str, Any], schema: Dict[str, Any] = None)
         if any("observations" in err for err in errors):
             hints.append(
                 "At least one observation is required with observation_type, facility, and observed_quantities"
+            )
+
+        if any(
+            ("structure_type" in err) or ("material" in err) or ("test_conditions" in err) or ("measurements" in err)
+            for err in errors
+        ):
+            hints.append(
+                "Do not include structures-only top-level keys. Use domain.study and domain.observations for structures records."
             )
         
         if any("creators" in err for err in errors):
@@ -209,7 +217,7 @@ def validate_with_hints(metadata: Dict[str, Any], schema: Dict[str, Any] = None)
         
         if any("domain" in err for err in errors):
             hints.append(
-                "Domain section requires: discipline, study (with field and keywords), and observations"
+                "Domain rules: both disciplines require discipline, study (with field and keywords), and observations"
             )
     
     return is_valid, errors, hints
