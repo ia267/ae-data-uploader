@@ -684,9 +684,14 @@ def info():
     click.echo("  - fluid_dynamics")
     click.echo("  - structures")
     
-    click.echo("\nSupported fields:")
-    fields = ["jet", "boundary_layer", "wake", "combustion", "other"]
-    for field in fields:
+    click.echo("\nSupported fields (fluid_dynamics):")
+    fluid_fields = ["jet", "boundary_layer", "wake", "combustion", "other"]
+    for field in fluid_fields:
+        click.echo(f"  - {field}")
+
+    click.echo("\nSupported fields (structures):")
+    structures_fields = ["aeroelasticity", "structural_dynamics", "composites", "fracture_fatigue", "other"]
+    for field in structures_fields:
         click.echo(f"  - {field}")
     
     click.echo("\nObservation types:")

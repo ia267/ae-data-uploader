@@ -251,7 +251,7 @@ class InvenioClient:
             # Import conversion function
             try:
                 from ae_uploader.schemas.domain import to_invenio_custom_fields
-                # Convert nested domain structure to flattened Invenio format
+                # Convert to deployment-specific custom_fields payload format
                 invenio_metadata["custom_fields"] = to_invenio_custom_fields(
                     metadata["domain"], 
                     namespace=self.custom_field_namespace

@@ -105,7 +105,7 @@ firefox metadata_form.html
 
 Fill out the form, click "Download metadata.json", and save it to your data folder.
 
-**Note:** If you cloned the repository, you can also access the form directly at `web/metadata_form.html` without exporting it.
+**Note:** If you cloned the repository, the form file is `src/ae_uploader/web/metadata_form.html`.
 
 See [web/README.md](web/README.md) for detailed form instructions.
 

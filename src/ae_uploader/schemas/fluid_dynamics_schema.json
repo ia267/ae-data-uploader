@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://ae-datastore.org/schemas/fluid-dynamics-metadata/v1.0",
-  "title": "Fluid Dynamics Domain Metadata Schema",
-  "description": "Schema for validating fluid dynamics metadata (numerical and experimental) before upload to Invenio-RDM",
+  "title": "Aeronautics Domain Metadata Schema",
+  "description": "Schema for validating fluid_dynamics and structures metadata before upload to Invenio-RDM",
   "type": "object",
   "required": [
     "title",
@@ -96,7 +96,7 @@
     },
     "domain": {
       "type": "object",
-      "required": ["discipline", "study", "observations"],
+      "required": ["discipline"],
       "properties": {
         "discipline": {
           "type": "string",
@@ -109,8 +109,7 @@
           "properties": {
             "field": {
               "type": "string",
-              "enum": ["jet", "boundary_layer", "wake", "combustion", "other"],
-              "description": "Primary research field"
+              "description": "Primary research field (discipline-specific enum via domain.oneOf)"
             },
             "subfield": {
               "type": "array",
@@ -215,21 +214,21 @@
                       "type": "object",
                       "additionalProperties": false,
                       "patternProperties": {
-                        "^[a-zA-Z_][a-zA-Z0-9_=]*$": {
+                        "^.{1,128}$": {
                           "type": "string"
                         }
                       },
-                      "description": "Descriptions for each variable. Keys must match variable names."
+                      "description": "Descriptions for each variable. Keys should match variable names."
                     },
                     "variable_units": {
                       "type": "object",
                       "additionalProperties": false,
                       "patternProperties": {
-                        "^[a-zA-Z_][a-zA-Z0-9_=]*$": {
+                        "^.{1,128}$": {
                           "type": "string"
                         }
                       },
-                      "description": "Units for each variable. Keys must match variable names."
+                      "description": "Units for each variable. Keys should match variable names."
                     },
                     "storage_format": {
                       "type": "string",
@@ -249,7 +248,42 @@
             }
           }
         }
-      }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "description": "Fluid dynamics domain constraints",
+          "properties": {
+            "discipline": {
+              "const": "fluid_dynamics"
+            },
+            "study": {
+              "properties": {
+                "field": {
+                  "enum": ["jet", "boundary_layer", "wake", "combustion", "other"]
+                }
+              }
+            }
+          },
+          "required": ["discipline", "study", "observations"]
+        },
+        {
+          "description": "Structures domain constraints",
+          "properties": {
+            "discipline": {
+              "const": "structures"
+            },
+            "study": {
+              "properties": {
+                "field": {
+                  "enum": ["aeroelasticity", "structural_dynamics", "composites", "fracture_fatigue", "other"]
+                }
+              }
+            }
+          },
+          "required": ["discipline", "study", "observations"]
+        }
+      ]
     },
     "rights": {
       "type": "array",

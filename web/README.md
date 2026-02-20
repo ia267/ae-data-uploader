@@ -8,29 +8,29 @@ Supports both fluid mechanics and structural mechanics datasets.
 
 ### Option 1: Open Locally
 
-Simply open `metadata_form.html` in your web browser:
+Open the canonical form file in your web browser:
 
 ```bash
-# From the web directory
-firefox metadata_form.html
+# From the repository root
+firefox src/ae_uploader/web/metadata_form.html
 # or
-google-chrome metadata_form.html
+google-chrome src/ae_uploader/web/metadata_form.html
 # or
-open metadata_form.html  # macOS
+open src/ae_uploader/web/metadata_form.html  # macOS
 ```
 
 ### Option 2: Serve with Python
 
 ```bash
-# From the web directory
+# From the repository root
 python3 -m http.server 8000
 ```
 
-Then visit: http://localhost:8000/metadata_form.html
+Then visit: http://localhost:8000/src/ae_uploader/web/metadata_form.html
 
 ### Option 3: Deploy to Web Server
 
-Upload `metadata_form.html` to your web server or GitHub Pages. The form runs entirely in the browser (no server-side processing needed).
+Upload `src/ae_uploader/web/metadata_form.html` to your web server or GitHub Pages (rename to `metadata_form.html` if desired). The form runs entirely in the browser (no server-side processing needed).
 
 ## Workflow
 

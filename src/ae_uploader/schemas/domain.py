@@ -39,7 +39,9 @@ class StudyMetadataSchema(Schema):
     
     field = fields.Str(
         required=True, 
-        validate=validate.OneOf(["jet", "boundary_layer", "wake", "combustion", "other"])
+        validate=validate.OneOf([
+            "jet", "boundary_layer", "wake", "combustion", "other"
+        ])
     )  # MANDATORY: controlled vocabulary
     subfield = fields.List(fields.Str())
     regime = fields.Str()
@@ -52,8 +54,8 @@ class FluidDynamicsSchema(Schema):
     
     discipline = fields.Str(
         required=True, 
-        validate=validate.OneOf(["fluid_dynamics", "structures"])
-    )  # MANDATORY: controlled vocabulary
+        validate=validate.OneOf(["fluid_dynamics"])
+    )  # MANDATORY: fluid-only controlled vocabulary
     study = fields.Nested(StudyMetadataSchema, required=True)  # MANDATORY: must have study info
     observations = fields.List(fields.Nested(ObservationSchema), required=True)  # MANDATORY: must have at least one observation
 
@@ -67,7 +69,7 @@ def to_invenio_custom_fields(data: dict, namespace: str = "domain") -> dict:
         namespace: Custom field namespace (default: "domain")
     
     Returns:
-        Dictionary with flattened custom fields for Invenio API
+        Dictionary with nested custom fields for Invenio API
     
     Example:
         >>> data = {
@@ -80,42 +82,19 @@ def to_invenio_custom_fields(data: dict, namespace: str = "domain") -> dict:
         ... }
         >>> to_invenio_custom_fields(data)
         {
-            "domain:discipline": "fluid_dynamics",
-            "domain:study:field": "jet",
-            "domain:study:keywords": ["turbulence", "mixing"],
-            "domain:study:regime": "subsonic"
+            "domain": {
+                "discipline": "fluid_dynamics",
+                "study": {
+                    "field": "jet",
+                    "keywords": ["turbulence", "mixing"],
+                    "regime": "subsonic"
+                }
+            }
         }
     """
-    custom_fields = {}
-    
-    # Top-level discipline
-    if "discipline" in data:
-        custom_fields[f"{namespace}:discipline"] = data["discipline"]
-    
-    # Study metadata
-    if "study" in data:
-        study = data["study"]
-        
-        if "field" in study:
-            custom_fields[f"{namespace}:study:field"] = study["field"]
-        
-        if "keywords" in study:
-            custom_fields[f"{namespace}:study:keywords"] = study["keywords"]
-        
-        if "regime" in study:
-            custom_fields[f"{namespace}:study:regime"] = study["regime"]
-        
-        if "model" in study:
-            custom_fields[f"{namespace}:study:model"] = study["model"]
-        
-        if "subfield" in study:
-            # Convert list to comma-separated string if needed
-            subfield = study["subfield"]
-            if isinstance(subfield, list):
-                subfield = ", ".join(subfield)
-            custom_fields[f"{namespace}:study:subfield"] = subfield
-    
-    return custom_fields
+    # Invenio custom fields for this deployment are configured as:
+    # custom_fields.<namespace> = { ...domain metadata... }
+    return {namespace: data}
 
 
 def from_invenio_custom_fields(custom_fields: dict, namespace: str = "domain") -> dict:
@@ -129,28 +108,29 @@ def from_invenio_custom_fields(custom_fields: dict, namespace: str = "domain") -
     Returns:
         Dictionary compatible with FluidDynamicsSchema
     """
+    # Preferred format: nested under custom_fields.<namespace>.
+    nested = custom_fields.get(namespace)
+    if isinstance(nested, dict):
+        return nested
+
+    # Backward-compatible fallback for legacy flattened keys.
     data = {}
-    
-    # Extract discipline
+
     discipline_key = f"{namespace}:discipline"
     if discipline_key in custom_fields:
         data["discipline"] = custom_fields[discipline_key]
-    
-    # Extract study fields
+
     study = {}
     study_prefix = f"{namespace}:study:"
-    
     for key, value in custom_fields.items():
         if key.startswith(study_prefix):
             field_name = key[len(study_prefix):]
-            
-            # Handle subfield string -> list conversion
             if field_name == "subfield" and isinstance(value, str):
                 study[field_name] = [s.strip() for s in value.split(",")]
             else:
                 study[field_name] = value
-    
+
     if study:
         data["study"] = study
-    
+
     return data
