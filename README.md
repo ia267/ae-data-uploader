@@ -1,5 +1,8 @@
 # AE Uploader
 
+![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 Python CLI for validating aeronautics dataset metadata and uploading data to InvenioRDM.
 
 Supports:
