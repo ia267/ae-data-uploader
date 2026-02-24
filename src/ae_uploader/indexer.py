@@ -10,7 +10,12 @@ import struct
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def _utc_timestamp() -> str:
+    """Return an ISO-8601 UTC timestamp with a trailing Z."""
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -98,7 +103,7 @@ class IndexGenerator:
         
         index = {
             "version": "1.0",
-            "created": datetime.utcnow().isoformat() + "Z",
+            "created": _utc_timestamp(),
             "file_name": file_path.name,
             "file_size": file_path.stat().st_size,
             "file_type": "hdf5",
@@ -188,7 +193,7 @@ class IndexGenerator:
         """
         index = {
             "version": "1.0",
-            "created": datetime.utcnow().isoformat() + "Z",
+            "created": _utc_timestamp(),
             "file_name": file_path.name,
             "file_size": file_path.stat().st_size,
             "file_type": "csv",
@@ -263,7 +268,7 @@ class IndexGenerator:
         
         index = {
             "version": "1.0",
-            "created": datetime.utcnow().isoformat() + "Z",
+            "created": _utc_timestamp(),
             "file_name": file_path.name,
             "file_size": file_path.stat().st_size,
             "file_type": "netcdf",
@@ -314,7 +319,7 @@ class IndexGenerator:
         """
         index = {
             "version": "1.0",
-            "created": datetime.utcnow().isoformat() + "Z",
+            "created": _utc_timestamp(),
             "file_name": file_path.name,
             "file_size": file_path.stat().st_size,
             "file_type": "binary"
@@ -345,7 +350,7 @@ class IndexGenerator:
         """Generate basic index for unknown file types."""
         return {
             "version": "1.0",
-            "created": datetime.utcnow().isoformat() + "Z",
+            "created": _utc_timestamp(),
             "file_name": file_path.name,
             "file_size": file_path.stat().st_size,
             "file_type": "generic",
@@ -399,7 +404,7 @@ class MultiFileIndexGenerator:
         """Generate single master index for all files."""
         master_index = {
             "version": "1.0",
-            "created": datetime.utcnow().isoformat() + "Z",
+            "created": _utc_timestamp(),
             "index_type": "master",
             "directory": directory.name,
             "total_files": len(files),
@@ -443,7 +448,7 @@ class MultiFileIndexGenerator:
         # Create master catalog
         catalog = {
             "version": "1.0",
-            "created": datetime.utcnow().isoformat() + "Z",
+            "created": _utc_timestamp(),
             "index_type": "hierarchical_catalog",
             "directory": directory.name,
             "total_files": len(files),
