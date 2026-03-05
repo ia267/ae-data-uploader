@@ -21,7 +21,6 @@ from dotenv import load_dotenv
 
 from .validate import validate_metadata_file, validate_with_hints, ValidationError, load_schema
 from .client import InvenioClient, create_client_from_env
-from .indexer import IndexGenerator, MultiFileIndexGenerator, save_index
 
 
 def _get_directory_size(directory: Path) -> int:
@@ -262,6 +261,8 @@ def upload(data_path: str,
     if auto_index:
         click.echo("\n[INFO] Generating byte-offset index...")
         try:
+            from .indexer import IndexGenerator, MultiFileIndexGenerator, save_index
+
             if is_single_file:
                 # Generate index for single file
                 index_file = path.parent / f"{path.stem}_index.json"
@@ -283,6 +284,12 @@ def upload(data_path: str,
                 click.echo(f"  Index size: {_format_bytes(index_file.stat().st_size)}")
         except ImportError as e:
             click.echo(f"[WARNING] Could not generate index: {e}", err=True)
+            if 'h5py' in str(e):
+                click.echo("[HINT] Install required library: pip install h5py", err=True)
+            elif 'netCDF4' in str(e):
+                click.echo("[HINT] Install required library: pip install netCDF4", err=True)
+            elif 'numpy' in str(e).lower():
+                click.echo("[HINT] Install required library: pip install numpy", err=True)
             click.echo("[WARNING] Continuing without index...", err=True)
             auto_index = False
         except Exception as e:
@@ -583,6 +590,8 @@ def generate_index(file_or_directory: str,
     path = Path(file_or_directory)
     
     try:
+        from .indexer import IndexGenerator, MultiFileIndexGenerator, save_index
+
         if path.is_file():
             # Single file index
             click.echo(f"[INFO] Generating index for {path.name}...")
@@ -652,6 +661,8 @@ def generate_index(file_or_directory: str,
             click.echo("  pip install h5py", err=True)
         elif 'netCDF4' in str(e):
             click.echo("  pip install netCDF4", err=True)
+        elif 'numpy' in str(e).lower():
+            click.echo("  pip install numpy", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"[ERROR] Failed to generate index: {e}", err=True)
