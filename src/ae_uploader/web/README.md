@@ -2,35 +2,11 @@
 
 This HTML form provides a user-friendly interface for generating metadata.json files for research data without using the command line.
 
-Supports both fluid mechanics and structural mechanics datasets.
-
 ## Usage
 
-### Option 1: Open Locally
+### Open Locally
 
-Open the canonical form file in your web browser:
-
-```bash
-# From the repository root
-firefox src/ae_uploader/web/metadata_form.html
-# or
-google-chrome src/ae_uploader/web/metadata_form.html
-# or
-open src/ae_uploader/web/metadata_form.html  # macOS
-```
-
-### Option 2: Serve with Python
-
-```bash
-# From the repository root
-python3 -m http.server 8000
-```
-
-Then visit: http://localhost:8000/src/ae_uploader/web/metadata_form.html
-
-### Option 3: Deploy to Web Server
-
-Upload `src/ae_uploader/web/metadata_form.html` to your web server or GitHub Pages (rename to `metadata_form.html` if desired). The form runs entirely in the browser (no server-side processing needed).
+Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 
 ## Workflow
 
@@ -103,11 +79,11 @@ Upload `src/ae_uploader/web/metadata_form.html` to your web server or GitHub Pag
 
 ## Tips
 
-1. **Required Fields**: All fields marked with * must be filled
-2. **Keywords**: Use comma-separated values (e.g., "turbulence, LES, high-speed")
-3. **Multiple Items**: Use "+ Add" buttons for multiple creators or observations
-4. **File Patterns**: Use wildcards like `data_*.vtk` for file name patterns
-5. **Validation**: The browser will highlight any validation errors before download
+1. Required fields: All fields marked with * must be filled
+2. Keywords: Use comma-separated values (e.g., "turbulence, LES, high-speed")
+3. Multiple items: Use "+ Add" buttons for multiple creators or observations
+4. File patterns: Use wildcards like `data_*.vtk` for file name patterns
+5. Validation: The browser will highlight any validation errors before download
 
 ## Comparison with CLI
 
@@ -122,28 +98,21 @@ Upload `src/ae_uploader/web/metadata_form.html` to your web server or GitHub Pag
 
 Both methods produce identical `metadata.json` files that work with `ae-upload upload`.
 
-## Browser Compatibility
-
-- Chrome/Edge: ✓ Fully supported
-- Firefox: ✓ Fully supported
-- Safari: ✓ Fully supported
-- Mobile browsers: ✓ Responsive design
-
 ## Troubleshooting
 
-**Download doesn't start:**
+Download doesn't start:
 - Check browser download settings
 - Some browsers may block automatic downloads
-- Try right-click → "Save Link As"
+- Try right-click --> "Save Link As"
 
-**Form validation errors:**
+Form validation errors:
 - Required fields must be filled (marked with *)
 - Title must be 3-255 characters
 - Description must be at least 10 characters
 - At least one creator required
 - At least one observation required
 
-**JSON file not working with ae-upload:**
+JSON file not working with ae-upload:
 - Ensure you saved it as `metadata.json`
 - Verify it's in the same directory as your data files
 - Run `ae-upload validate metadata.json` to check for issues

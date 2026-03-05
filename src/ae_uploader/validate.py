@@ -14,7 +14,7 @@ from typing import Dict, Any, List, Tuple
 import jsonschema
 from jsonschema import Draft7Validator, validators
 
-# Use importlib.resources for Python 3.9+, fall back to importlib_resources for 3.8
+# Use importlib.resources for Python 3.9+, with a legacy backport fallback.
 if sys.version_info >= (3, 9):
     from importlib import resources
 else:
@@ -51,7 +51,7 @@ def load_schema(schema_name: str = "fluid_dynamics_schema.json") -> Dict[str, An
                 with schema_file.open('r') as f:
                     return json.load(f)
             else:
-                # Python 3.8 with importlib_resources backport
+                # Legacy runtime fallback via importlib_resources backport
                 with resources.open_text("ae_uploader.schemas", schema_name) as f:
                     return json.load(f)
         except (FileNotFoundError, AttributeError, TypeError):

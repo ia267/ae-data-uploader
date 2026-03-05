@@ -1,6 +1,6 @@
 # AE Uploader
 
-![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
+![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 Python CLI for validating aeronautics dataset metadata and uploading data to InvenioRDM.
@@ -17,14 +17,18 @@ cd ae-data-uploader
 pip install -e .
 ```
 
-## Core Workflow
+## Quick Start
 
 ```bash
 ae-upload configure
-ae-upload generate numerical     # or: experimental
+ae-upload export-form --output metadata_form.html
+# open metadata_form.html in your browser and download metadata.json
+# alternative: ae-upload generate numerical  # or: experimental
 ae-upload validate metadata.json
 ae-upload upload ./my_data_directory
 ```
+
+See `QUICKSTART.md` for the minimal first-run flow.
 
 ## Common Options
 
@@ -39,11 +43,10 @@ ae-upload info
 
 ## Documentation
 
-- User guide: [`USER_DOCS.md`](USER_DOCS.md)
+- Quick start (first upload): [`QUICKSTART.md`](QUICKSTART.md)
+- User docs (detailed usage and troubleshooting): [`USER_DOCS.md`](USER_DOCS.md)
 - Contributing guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- Quick start: [`QUICKSTART.md`](QUICKSTART.md)  
 - Installation/testing details: [`INSTALL.md`](INSTALL.md)  
-- Web form docs: [`src/ae_uploader/web/README.md`](src/ae_uploader/web/README.md)
 - Example metadata: [`examples/`](examples)
 
 ## License

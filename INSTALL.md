@@ -1,235 +1,69 @@
-# AE Uploader - Installation and Testing Guide
+# AE Uploader - Installation and Testing Details
 
-## Package Overview
+This guide is for setup and verification.  
+For end-user upload workflow, use `QUICKSTART.md` and `USER_DOCS.md`.
 
-The AE Uploader is now configured with your fluid dynamics domain schema supporting both numerical and experimental observations. All emojis have been removed from the output.
+## Prerequisites
 
-## Installation
+- Python 3.9+
+- Git
+- SSH access to `github.ic.ac.uk` (for cloning private repository URLs)
 
-### Prerequisites
+## Install
 
-- Python 3.8 or higher
-- Git (for cloning the repository)
-- **SSH keys configured for github.ic.ac.uk** - Required for authentication
-  - See [GitHub SSH setup guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
-
-### Install Steps
-
-1. **Clone the repository (using SSH):**
+Clone and install in editable mode:
 
 ```bash
 git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
-```
-
-2. **Install the package:**
-
-```bash
 pip install -e .
 ```
 
-The `-e` flag installs in editable/development mode, so changes to the source code are immediately reflected without reinstalling.
+Optional: install development dependencies:
 
-### Alternative: Direct Install via SSH
+```bash
+pip install -e ".[dev]"
+```
 
-Skip cloning and install directly:
+Alternative: install directly via SSH without cloning:
 
 ```bash
 pip install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
 ```
 
-### Troubleshooting
-
-**If git clone or pip install hangs:**
-- You're likely using HTTPS instead of SSH
-- HTTPS authentication prompts cause indefinite hangs
-- Solution: Use SSH URLs (`git@github.ic.ac.uk:...`) as shown above
-- Verify SSH access: `ssh -T git@github.ic.ac.uk`
-
-## Quick Test
-
-### 1. Check Installation
+## Verify Installation
 
 ```bash
+ae-upload --version
 ae-upload info
 ```
 
-Expected output:
-```
-AE Uploader v0.1.0
-==================================================
+If `ae-upload` is not found, ensure your virtual environment is activated and reinstall with `pip install -e .`.
 
-Configuration:
-  INVENIO_URL: Not set
-  INVENIO_TOKEN: Not set
+## Run Tests
 
-[WARNING] Missing configuration. Set environment variables or use --token and --url
-
-Supported disciplines:
-  - fluid_dynamics
-  - structures
-
-Supported fields:
-  - jet
-  - boundary_layer
-  - wake
-  - combustion
-  - other
-
-Observation types:
-  - numerical
-  - experimental
-```
-
-### 2. Generate Template
+Run the full test suite:
 
 ```bash
-ae-upload generate numerical
+pytest
 ```
 
-This creates `metadata.json` with the fluid dynamics schema structure.
-
-### 3. Validate Template
+Run specific test modules:
 
 ```bash
-ae-upload validate metadata.json --verbose
+pytest tests/test_cli.py
+pytest tests/test_validate.py
 ```
 
-Expected output:
-```
-[INFO] Validating metadata.json...
-[OK] Metadata is valid!
+## Install Troubleshooting
 
-Summary:
-  Title: My Fluid Dynamics Dataset
-  Discipline: fluid_dynamics
-  Creators: 1
-```
+If `git clone` or `pip install` hangs:
+- Use SSH URLs (`git@github.ic.ac.uk:...`), not HTTPS URLs.
+- Verify SSH access: `ssh -T git@github.ic.ac.uk`
+- Check loaded SSH keys: `ssh-add -l`
 
-### 4. Try Example Files
+## Related Docs
 
-Test with the provided examples:
-
-```bash
-# Numerical simulation example
-ae-upload validate examples/metadata_numerical_les.json --verbose
-
-# Experimental data example  
-ae-upload validate examples/metadata_experimental_piv.json --verbose
-```
-
-## Key Changes from Original Request
-
-### Schema Updates
-- Changed from CFD-specific to fluid dynamics domain schema
-- Supports both `numerical` and `experimental` observation types
-- Includes three-level hierarchy: Study -> Observations -> Files
-- Matches your Marshmallow schema structure exactly
-
-### Field Mappings
-- `discipline`: "fluid_dynamics" or "structures"
-- `field`: jet, boundary_layer, wake, combustion, other
-- `observation_type`: numerical or experimental
-- `facility`: Code name (numerical) or Wind tunnel (experimental)
-- `observed_quantities`: Variables measured/simulated
-
-### CLI Changes
-- Removed all emoji characters (✓, ✗, 📋, 🚀, etc.)
-- Replaced with text indicators: [OK], [ERROR], [INFO], [FAILED], [WARNING], [HINTS]
-- Updated `generate` command to use observation_type (numerical/experimental) instead of solver
-- Updated `info` command to show disciplines, fields, and observation types
-
-### File Structure
-- Schema file: `fluid_dynamics_schema.json` (old `cfd_schema.json` removed)
-- Examples updated:
-  - `metadata_numerical_les.json` - LES contrails simulation
-  - `metadata_experimental_piv.json` - PIV boundary layer measurements
-  - Removed: OpenFOAM, Nektar++, SU2 specific examples
-
-## Example Metadata Structure
-
-```json
-{
-  "title": "Dataset Title",
-  "description": "Description",
-  "creators": [...],
-  "publication_date": "2025-12-18",
-  "resource_type": {"id": "dataset"},
-  "domain": {
-    "discipline": "fluid_dynamics",
-    "study": {
-      "field": "jet",
-      "subfield": ["combustion", "multi-phase"],
-      "regime": "compressible",
-      "model": "contrails",
-      "keywords": ["LES", "turbulence"]
-    },
-    "observations": [
-      {
-        "observation_type": "numerical",
-        "facility": "BOFFIN",
-        "methods": ["LES", "PBE"],
-        "observed_quantities": ["velocity", "pressure"],
-        "operating_conditions": {
-          "Mach": 0.7,
-          "Reynolds": 1000000
-        },
-        "files": [
-          {
-            "file_name": "data_*.vtk",
-            "variables": ["u", "v", "w", "p"],
-            "variable_units": {"u": "m/s", "p": "Pa"}
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-## Testing Upload (When Ready)
-
-### Set Up Environment
-
-```bash
-# Create .env file
-cat > .env << EOF
-INVENIO_URL=https://your-invenio-instance.org
-INVENIO_TOKEN=your_access_token
-EOF
-```
-
-### Upload Data
-
-```bash
-# Create draft only (for review)
-ae-upload upload ./my_data --draft-only
-
-# Upload and publish
-ae-upload upload ./my_data
-```
-
-## Schema Validation Features
-
-The schema enforces:
-- At least one observation per dataset
-- Required fields per observation type
-- Valid enumerations for discipline, field, observation_type
-- Proper file metadata when files are included
-- Variable units and descriptions for data files
-
-## Next Steps
-
-1. Test the installation: `pip install -e .`
-2. Generate a template: `ae-upload generate numerical`
-3. Edit the template with your data
-4. Validate: `ae-upload validate metadata.json`
-5. When ready, upload to your Invenio instance
-
-## Support
-
-For questions or issues:
-- Check validation output for specific error messages
-- Use `--verbose` flag for detailed information
-- Review example files in `examples/` directory
-- See full documentation in `README.md`
+- `QUICKSTART.md`: shortest first upload path
+- `USER_DOCS.md`: detailed usage and options
+- `README.md`: project overview and doc map
