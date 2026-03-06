@@ -45,6 +45,8 @@ ae-upload validate metadata.json
 
 ```bash
 ae-upload upload ./your_data_directory
+# use --publish to publish immediately
+# ae-upload upload ./your_data_directory --publish
 ```
 
 Place `metadata.json` in the data directory, or pass it with `--metadata /path/to/metadata.json`.

@@ -25,7 +25,8 @@ ae-upload export-form --output metadata_form.html
 # open metadata_form.html in your browser and download metadata.json
 # alternative: ae-upload generate numerical  # or: experimental
 ae-upload validate metadata.json
-ae-upload upload ./my_data_directory
+ae-upload upload ./my_data_directory         # creates draft by default
+# ae-upload upload ./my_data_directory --publish
 ```
 
 See `QUICKSTART.md` for the minimal first-run flow.
@@ -33,7 +34,7 @@ See `QUICKSTART.md` for the minimal first-run flow.
 ## Common Options
 
 ```bash
-ae-upload upload ./my_data --draft-only
+ae-upload upload ./my_data --publish
 ae-upload upload ./my_data --no-zip
 ae-upload schema --output schema.json
 ae-upload export-form --output metadata_form.html

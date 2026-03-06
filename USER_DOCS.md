@@ -73,6 +73,8 @@ Directory upload:
 ae-upload upload ./my_data
 ```
 
+`upload` creates a draft by default. Add `--publish` to publish immediately.
+
 Single file upload:
 
 ```bash
@@ -82,7 +84,7 @@ ae-upload upload ./my_data/file.h5 --metadata /path/to/metadata.json
 Common options:
 
 ```bash
-ae-upload upload ./my_data --draft-only
+ae-upload upload ./my_data --publish
 ae-upload upload ./my_data --no-zip
 ae-upload upload ./my_data --metadata /path/to/metadata.json
 ae-upload upload ./my_data --schema schema.json
