@@ -269,8 +269,8 @@
                 <div class="help-text" id="keywordSuggestions">Suggested keywords are updated from the selected field.</div>
                 <div class="help-text" id="keywordNormalizationHint"></div>
                 <label for="keywordApiUrl">Keyword API URL (optional)</label>
-                <input type="url" id="keywordApiUrl" placeholder="e.g., https://data-dev.ae.ic.ac.uk/api/vocabularies/subjects">
-                <div class="help-text">Optional endpoint for API-backed suggestions (vocabulary/facets/search). Local suggestions are always available.</div>
+                <input type="url" id="keywordApiUrl" placeholder="e.g., https://data-dev.ae.ic.ac.uk/api/records">
+                <div class="help-text">Recommended: Invenio records endpoint (e.g., /api/records) to suggest keywords from existing records. Local suggestions are always available.</div>
                 <div class="help-text" id="keywordApiStatus"></div>
             </div>
 
@@ -518,6 +518,7 @@
         const KEYWORD_API_STORAGE_KEY = 'ae_datastore_keyword_api_url';
         const KEYWORD_API_DEBOUNCE_MS = 300;
         const KEYWORD_MAX_SUGGESTIONS = 8;
+        const KEYWORD_RECORDS_FACET_NAME = 'keywords';
 
         let creatorCounter = 0;
         let observationCounter = 0;
@@ -703,6 +704,15 @@
             status.classList.toggle('error', Boolean(isError));
         }
 
+        function isRecordsSearchEndpoint(urlString) {
+            try {
+                const url = new URL(urlString);
+                return /\/api\/records\/?$/.test(url.pathname);
+            } catch (error) {
+                return false;
+            }
+        }
+
         function getKeywordSuggestionPool() {
             const fieldKeywords = getCurrentFieldContext().fieldConfig.keywords || [];
             return uniqueList(fieldKeywords.concat(KEYWORD_CATALOG));
@@ -847,6 +857,20 @@
         }
 
         function collectKeywordCandidatesFromApiResponse(payload) {
+            // Fast path for Invenio record-search facet responses.
+            if (
+                payload &&
+                payload.aggregations &&
+                payload.aggregations[KEYWORD_RECORDS_FACET_NAME] &&
+                Array.isArray(payload.aggregations[KEYWORD_RECORDS_FACET_NAME].buckets)
+            ) {
+                return normalizeKeywordList(
+                    payload.aggregations[KEYWORD_RECORDS_FACET_NAME].buckets
+                        .map(function(bucket) { return bucket && typeof bucket.key === 'string' ? bucket.key : ''; })
+                        .filter(Boolean)
+                );
+            }
+
             const candidates = [];
             const visited = new Set();
 
@@ -878,7 +902,7 @@
             }
 
             visit(payload);
-            return uniqueList(candidates);
+            return normalizeKeywordList(uniqueList(candidates));
         }
 
         function buildKeywordApiRequestUrl(endpoint, fragment, discipline, field) {
@@ -899,6 +923,13 @@
             requestUrl.searchParams.set('discipline', discipline);
             requestUrl.searchParams.set('field', field);
             requestUrl.searchParams.set('size', String(KEYWORD_MAX_SUGGESTIONS));
+
+            // If endpoint is Invenio records search, request keyword facet buckets
+            // from indexed custom field values across existing records.
+            if (isRecordsSearchEndpoint(requestUrl.toString())) {
+                requestUrl.searchParams.set('facets', KEYWORD_RECORDS_FACET_NAME);
+                requestUrl.searchParams.set('size', '0');
+            }
             return requestUrl.toString();
         }
 
