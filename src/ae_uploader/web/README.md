@@ -37,6 +37,8 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 - **Dynamic Fields**: Add multiple creators and observations
 - **Smart Validation**: Required fields marked with asterisk (*)
 - **Dropdown Menus**: Pre-populated with valid values from schema
+- **Keyword Autocomplete**: Suggests canonical keywords as users type
+- **Keyword Normalisation**: Deduplicates common variants (e.g., `high-Re` vs `high Re`)
 - **Conditional Sections**: File information appears for both numerical and experimental
 - **Real-time Preview**: Form validates as you type
 - **Mobile Responsive**: Works on phones and tablets
@@ -81,7 +83,7 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 ## Tips
 
 1. Required fields: All fields marked with * must be filled
-2. Keywords: Use comma-separated values (e.g., "turbulence, LES, high-speed")
+2. Keywords: Use comma-separated values; suggestions/autocomplete appear as you type
 3. Multiple items: Use "+ Add" buttons for multiple creators or observations
 4. File patterns: Use wildcards like `data_*.vtk` for file name patterns
 5. Validation: The browser will highlight any validation errors before download
