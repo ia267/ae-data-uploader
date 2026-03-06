@@ -20,19 +20,9 @@ This saves credentials to `.env` in your current directory.
 
 ## 2. Create `metadata.json`
 
-Recommended (web form):
-
 ```bash
 ae-upload export-form --output metadata_form.html
 # open metadata_form.html in your browser and download metadata.json
-```
-
-Alternative (CLI template):
-
-```bash
-ae-upload generate numerical
-# or
-ae-upload generate experimental
 ```
 
 ## 3. Validate Metadata

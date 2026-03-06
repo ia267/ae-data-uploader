@@ -70,6 +70,44 @@ def test_info_command_reports_ready_configuration(monkeypatch):
     assert "[OK] Configuration looks good!" in result.output
 
 
+def test_configure_command_shows_export_form_next_steps(monkeypatch):
+    class _DummyResponse:
+        status_code = 200
+
+    class _DummySession:
+        def __init__(self):
+            self.verify = True
+
+        def get(self, _url):
+            return _DummyResponse()
+
+    class _DummyClient:
+        def __init__(self, url, token, namespace):
+            self.base_url = url
+            self.token = token
+            self.namespace = namespace
+            self.session = _DummySession()
+
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            cli,
+            ["configure"],
+            input="https://example.org\nsecret-token\nsecret-token\ndomain\n",
+        )
+
+    assert result.exit_code == 0
+    assert "Next steps:" in result.output
+    assert "ae-upload export-form --output metadata_form.html" in result.output
+    assert "# open metadata_form.html in your browser and download metadata.json" in result.output
+    assert "alternative: ae-upload generate numerical" not in result.output
+    assert "ae-upload validate metadata.json" in result.output
+    assert "ae-upload upload ./my_data_directory         # creates draft by default" in result.output
+    assert "# ae-upload upload ./my_data_directory --publish" in result.output
+
+
 def test_save_credentials_writes_secure_env_file(tmp_path):
     env_path = tmp_path / ".env"
 

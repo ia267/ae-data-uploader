@@ -795,10 +795,13 @@ def configure(insecure: bool):
     # Save credentials
     _save_credentials(env_path, url, token, namespace)
     click.echo(f"\n[OK] Credentials saved to {env_path.absolute()}")
-    click.echo("\nYou can now run commands without --token and --url options:")
-    click.echo("  ae-upload generate numerical")
-    click.echo("  ae-upload upload ./my_data        # creates draft")
-    click.echo("  ae-upload upload ./my_data --publish")
+    click.echo("\nNext steps:")
+    click.echo("  ae-upload configure")
+    click.echo("  ae-upload export-form --output metadata_form.html")
+    click.echo("  # open metadata_form.html in your browser and download metadata.json")
+    click.echo("  ae-upload validate metadata.json")
+    click.echo("  ae-upload upload ./my_data_directory         # creates draft by default")
+    click.echo("  # ae-upload upload ./my_data_directory --publish")
 
 
 @cli.command()
