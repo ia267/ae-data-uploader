@@ -50,6 +50,43 @@
             font-style: italic;
             margin-top: 3px;
         }
+        .keyword-input-wrapper {
+            position: relative;
+        }
+        .autocomplete-list {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: #fff;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .autocomplete-item {
+            width: 100%;
+            text-align: left;
+            background: #fff;
+            color: #333;
+            border: none;
+            border-bottom: 1px solid #f1f1f1;
+            border-radius: 0;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+        .autocomplete-item:hover,
+        .autocomplete-item:focus {
+            background: #eef5ff;
+            color: #174a7a;
+            outline: none;
+        }
         .required::after {
             content: " *";
             color: #c62828;
@@ -221,8 +258,12 @@
                 <div class="help-text">Name or type of model/case (use N/A if not applicable)</div>
 
                 <label for="keywords" class="required">Keywords (comma-separated)</label>
-                <input type="text" id="keywords" required placeholder="e.g., turbulence, transition, jet">
+                <div class="keyword-input-wrapper">
+                    <input type="text" id="keywords" required placeholder="e.g., turbulence, transition, jet" autocomplete="off">
+                    <div id="keywordAutocomplete" class="autocomplete-list hidden" role="listbox" aria-label="Keyword suggestions"></div>
+                </div>
                 <div class="help-text" id="keywordSuggestions">Suggested keywords are updated from the selected field.</div>
+                <div class="help-text" id="keywordNormalizationHint"></div>
             </div>
 
             <div id="structuresSection" class="hidden">
@@ -424,6 +465,50 @@
             }
         };
 
+        const KEYWORD_ALIAS_MAP = {
+            'high re': 'high_Re',
+            'high-re': 'high_Re',
+            'high_re': 'high_Re',
+            'low re': 'low_Re',
+            'low-re': 'low_Re',
+            'low_re': 'low_Re',
+            'reynolds number': 'Reynolds_number',
+            'reynolds-number': 'Reynolds_number',
+            'reynolds_number': 'Reynolds_number',
+            'les': 'LES',
+            'dns': 'DNS',
+            'rans': 'RANS',
+            'urans': 'URANS',
+            'cfd': 'CFD',
+            'piv': 'PIV',
+            'plif': 'PLIF',
+            'openfoam': 'OpenFOAM',
+            'nektar': 'Nektar++',
+            'nektar++': 'Nektar++',
+            'high speed': 'high-speed',
+            'high-speed': 'high-speed',
+            'non premixed': 'non-premixed',
+            'non-premixed': 'non-premixed',
+            'non_premixed': 'non-premixed'
+        };
+
+        function buildKeywordCatalog() {
+            const catalog = [];
+
+            Object.keys(DISCIPLINE_CONFIG).forEach(function(discipline) {
+                const disciplineCfg = DISCIPLINE_CONFIG[discipline];
+                Object.keys(disciplineCfg.fields).forEach(function(field) {
+                    catalog.push.apply(catalog, disciplineCfg.fields[field].keywords || []);
+                });
+            });
+
+            catalog.push.apply(catalog, Object.values(KEYWORD_ALIAS_MAP));
+            return uniqueList(catalog);
+        }
+
+        const KEYWORD_CATALOG = buildKeywordCatalog();
+        const KEYWORD_MAX_SUGGESTIONS = 8;
+
         let creatorCounter = 0;
         let observationCounter = 0;
 
@@ -432,6 +517,34 @@
 
             document.getElementById('discipline').addEventListener('change', refreshStudyControls);
             document.getElementById('field').addEventListener('change', refreshStudyControls);
+
+            const keywordsInput = document.getElementById('keywords');
+
+            keywordsInput.addEventListener('input', function() {
+                refreshKeywordAutocomplete();
+                updateKeywordNormalizationHint();
+            });
+            keywordsInput.addEventListener('focus', function() {
+                refreshKeywordAutocomplete();
+            });
+            keywordsInput.addEventListener('blur', function() {
+                window.setTimeout(hideKeywordAutocomplete, 100);
+            });
+            keywordsInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    const firstSuggestion = document.querySelector('#keywordAutocomplete .autocomplete-item');
+                    if (firstSuggestion) {
+                        event.preventDefault();
+                        applyKeywordSuggestion(firstSuggestion.dataset.keyword);
+                    }
+                }
+            });
+
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.keyword-input-wrapper')) {
+                    hideKeywordAutocomplete();
+                }
+            });
 
             document.getElementById('subfield').addEventListener('change', function() {
                 toggleOtherInput(
@@ -478,6 +591,7 @@
             addCreator();
             addObservation();
             refreshStudyControls();
+            updateKeywordNormalizationHint();
         });
 
         function parseCommaList(str) {
@@ -486,6 +600,206 @@
 
         function uniqueList(values) {
             return Array.from(new Set(values.filter(Boolean)));
+        }
+
+        function keywordIdentity(value) {
+            return value
+                .trim()
+                .toLowerCase()
+                .replace(/[_-]+/g, ' ')
+                .replace(/\s+/g, ' ');
+        }
+
+        function normalizeKeyword(value) {
+            const cleaned = value ? value.trim().replace(/\s+/g, ' ') : '';
+            if (!cleaned) {
+                return '';
+            }
+
+            const identity = keywordIdentity(cleaned);
+            if (KEYWORD_ALIAS_MAP[identity]) {
+                return KEYWORD_ALIAS_MAP[identity];
+            }
+
+            const catalogMatch = KEYWORD_CATALOG.find(function(keyword) {
+                return keywordIdentity(keyword) === identity;
+            });
+            if (catalogMatch) {
+                return catalogMatch;
+            }
+
+            return cleaned;
+        }
+
+        function normalizeKeywordList(values) {
+            const seen = new Set();
+            const normalized = [];
+
+            values.forEach(function(value) {
+                const canonical = normalizeKeyword(value);
+                if (!canonical) {
+                    return;
+                }
+
+                const key = keywordIdentity(canonical);
+                if (seen.has(key)) {
+                    return;
+                }
+
+                seen.add(key);
+                normalized.push(canonical);
+            });
+
+            return normalized;
+        }
+
+        function getKeywordSuggestionPool() {
+            const fieldKeywords = getCurrentFieldContext().fieldConfig.keywords || [];
+            return uniqueList(fieldKeywords.concat(KEYWORD_CATALOG));
+        }
+
+        function getKeywordFragment(value) {
+            const pieces = value.split(',');
+            return pieces[pieces.length - 1].trim();
+        }
+
+        function buildKeywordAutocompleteContext() {
+            const input = document.getElementById('keywords');
+            const selected = normalizeKeywordList(parseCommaList(input.value));
+            const selectedKeys = new Set(selected.map(function(keyword) { return keywordIdentity(keyword); }));
+            const fragment = getKeywordFragment(input.value);
+            const fragmentKey = keywordIdentity(fragment);
+
+            return {
+                input: input,
+                selected: selected,
+                selectedKeys: selectedKeys,
+                fragment: fragment,
+                fragmentKey: fragmentKey,
+                hasActiveFragment: fragmentKey.length > 0,
+                inputIsFocused: document.activeElement === input
+            };
+        }
+
+        function filterKeywordSuggestions(candidates, fragmentKey, selectedKeys) {
+            return candidates.filter(function(keyword) {
+                const keywordKey = keywordIdentity(keyword);
+                if (selectedKeys.has(keywordKey)) {
+                    return false;
+                }
+                if (!fragmentKey) {
+                    return true;
+                }
+                return keywordKey.indexOf(fragmentKey) !== -1;
+            });
+        }
+
+        function sortKeywordSuggestions(candidates, fragmentKey) {
+            if (!fragmentKey) {
+                return candidates.sort(function(a, b) { return a.localeCompare(b); });
+            }
+
+            return candidates.sort(function(a, b) {
+                const aKey = keywordIdentity(a);
+                const bKey = keywordIdentity(b);
+                const aStarts = aKey.startsWith(fragmentKey) ? 0 : 1;
+                const bStarts = bKey.startsWith(fragmentKey) ? 0 : 1;
+                if (aStarts !== bStarts) {
+                    return aStarts - bStarts;
+                }
+                return a.localeCompare(b);
+            });
+        }
+
+        function buildLocalKeywordSuggestions(context) {
+            const filtered = filterKeywordSuggestions(
+                getKeywordSuggestionPool(),
+                context.fragmentKey,
+                context.selectedKeys
+            );
+            return sortKeywordSuggestions(filtered, context.fragmentKey).slice(0, KEYWORD_MAX_SUGGESTIONS);
+        }
+
+        function renderKeywordAutocomplete(suggestions) {
+            const autocomplete = document.getElementById('keywordAutocomplete');
+            if (suggestions.length === 0) {
+                hideKeywordAutocomplete();
+                return;
+            }
+
+            autocomplete.innerHTML = '';
+            suggestions.forEach(function(keyword) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'autocomplete-item';
+                button.dataset.keyword = keyword;
+                button.textContent = keyword;
+                button.addEventListener('click', function() {
+                    applyKeywordSuggestion(keyword);
+                });
+                autocomplete.appendChild(button);
+            });
+
+            autocomplete.classList.remove('hidden');
+        }
+
+        function hideKeywordAutocomplete() {
+            const autocomplete = document.getElementById('keywordAutocomplete');
+            autocomplete.classList.add('hidden');
+            autocomplete.innerHTML = '';
+        }
+
+        function applyKeywordSuggestion(keyword) {
+            const input = document.getElementById('keywords');
+            const currentValues = parseCommaList(input.value);
+            const endsWithComma = /,\s*$/.test(input.value);
+
+            if (currentValues.length === 0) {
+                currentValues.push(keyword);
+            } else if (endsWithComma) {
+                currentValues.push(keyword);
+            } else {
+                currentValues[currentValues.length - 1] = keyword;
+            }
+
+            const normalized = normalizeKeywordList(currentValues);
+            input.value = normalized.join(', ') + ', ';
+            refreshKeywordAutocomplete();
+            updateKeywordNormalizationHint();
+            input.focus();
+        }
+
+        function refreshKeywordAutocomplete() {
+            const context = buildKeywordAutocompleteContext();
+
+            if (!context.hasActiveFragment && !context.inputIsFocused) {
+                hideKeywordAutocomplete();
+                return;
+            }
+
+            const localSuggestions = buildLocalKeywordSuggestions(context);
+            renderKeywordAutocomplete(localSuggestions);
+        }
+
+        function updateKeywordNormalizationHint() {
+            const input = document.getElementById('keywords');
+            const hint = document.getElementById('keywordNormalizationHint');
+            const rawValues = parseCommaList(input.value);
+
+            if (rawValues.length === 0) {
+                hint.textContent = '';
+                return;
+            }
+
+            const normalized = normalizeKeywordList(rawValues);
+            const rawJoined = rawValues.join(', ');
+            const normalizedJoined = normalized.join(', ');
+
+            if (rawJoined !== normalizedJoined) {
+                hint.textContent = 'Normalized keywords that will be saved: ' + normalizedJoined;
+            } else {
+                hint.textContent = '';
+            }
         }
 
         function titleize(value) {
@@ -655,7 +969,9 @@
             );
 
             document.getElementById('keywordSuggestions').textContent =
-                'Suggested keywords: ' + fieldConfig.keywords.join(', ');
+                'Suggested keywords: ' + fieldConfig.keywords.join(', ') + '. Start typing for autocomplete.';
+            refreshKeywordAutocomplete();
+            updateKeywordNormalizationHint();
 
             if (!document.getElementById('model').value.trim()) {
                 document.getElementById('model').placeholder = getModelPlaceholder(fieldContext.discipline, fieldContext.field);
@@ -1023,7 +1339,7 @@
                 }
             });
 
-            const keywords = parseCommaList(document.getElementById('keywords').value);
+            const keywords = normalizeKeywordList(parseCommaList(document.getElementById('keywords').value));
             if (keywords.length === 0) {
                 errors.push('Keywords: provide at least one keyword.');
                 document.getElementById('keywords').classList.add('invalid');
@@ -1227,6 +1543,8 @@
             const creators = collectCreators();
             const discipline = document.getElementById('discipline').value;
             const observations = collectObservations();
+            const keywords = normalizeKeywordList(parseCommaList(document.getElementById('keywords').value));
+            document.getElementById('keywords').value = keywords.join(', ');
 
             const metadata = {
                 title: document.getElementById('title').value,
@@ -1238,7 +1556,7 @@
                     discipline: discipline,
                     study: {
                         field: document.getElementById('field').value,
-                        keywords: parseCommaList(document.getElementById('keywords').value)
+                        keywords: keywords
                     },
                     observations: observations
                 }
