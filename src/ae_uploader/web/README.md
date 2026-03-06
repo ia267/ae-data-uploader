@@ -28,7 +28,8 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 4. **Upload via CLI**: Use the ae-upload tool
    ```bash
    cd /path/to/my_simulation_data
-   ae-upload upload .
+   ae-upload upload .          # creates draft by default
+   # ae-upload upload . --publish
    ```
 
 ## Features

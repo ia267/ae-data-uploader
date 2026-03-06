@@ -83,8 +83,8 @@ def cli():
               help='Path to metadata.json (default: looks in data_path parent directory)')
 @click.option('--no-zip', is_flag=True, 
               help='Upload files individually instead of as a zip archive (directories only)')
-@click.option('--draft-only', is_flag=True,
-              help='Create draft but do not publish')
+@click.option('--draft-only/--publish', default=True,
+              help='Keep record as draft (default) or publish after upload')
 @click.option('--env-file', type=click.Path(exists=True),
               help='Path to .env file with INVENIO_TOKEN and INVENIO_URL')
 @click.option('--save-credentials', is_flag=True,
@@ -118,13 +118,14 @@ def upload(data_path: str,
     Examples:
         ae-upload upload ./data.h5 --metadata metadata.json
         ae-upload upload ./my_simulation_data --token YOUR_TOKEN --url https://invenio.example.org
+        ae-upload upload ./my_simulation_data --publish
         
     The command will:
     1. Look for metadata.json (in the same directory or specified via --metadata)
     2. Validate the metadata against the schema
     3. Create a draft record in Invenio-RDM
     4. Upload the file(s)
-    5. Publish the record (unless --draft-only is specified)
+    5. Keep as draft by default (or publish if --publish is provided)
     """
     # Load environment file if specified
     if env_file:
@@ -349,6 +350,7 @@ def upload(data_path: str,
     if draft_only:
         click.echo(f"\n[OK] Draft created successfully!")
         click.echo(f"   View at: {url}/uploads/{draft_id}")
+        click.echo("   Use --publish to publish automatically after upload.")
         if auto_index:
             click.echo(f"   ✨ Byte-offset index included for selective downloads")
     else:
@@ -795,7 +797,8 @@ def configure(insecure: bool):
     click.echo(f"\n[OK] Credentials saved to {env_path.absolute()}")
     click.echo("\nYou can now run commands without --token and --url options:")
     click.echo("  ae-upload generate numerical")
-    click.echo("  ae-upload upload ./my_data")
+    click.echo("  ae-upload upload ./my_data        # creates draft")
+    click.echo("  ae-upload upload ./my_data --publish")
 
 
 @cli.command()
