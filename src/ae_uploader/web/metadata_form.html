@@ -432,6 +432,7 @@
                         boundary_layer: ['wall_resolved_LES'],
                         wake: ['immersed_boundary_method']
                     },
+                    facilityOptions: ['Nektar++', 'Xcompact3D', 'PyFR', 'OpenFOAM', 'Star-CCM+', 'Ansys Fluent'],
                     extraQuantities: ['residuals', 'turbulent_kinetic_energy', 'dissipation_rate'],
                     dataAcquisition: [
                         { value: 'time_resolved', label: 'Time Resolved' },
@@ -440,8 +441,8 @@
                         { value: 'spatial_resolved', label: 'Spatial Resolved' }
                     ],
                     facilityLabel: 'Code Name',
-                    facilityHelp: 'Name of computational code or solver setup (e.g., Nektar++, OpenFOAM, BOFFIN).',
-                    facilityPlaceholder: 'e.g., Nektar++, OpenFOAM, in-house solver',
+                    facilityHelp: 'Select the computational code. Choose "Other (specify below)" for a custom solver/setup.',
+                    facilityPlaceholder: 'e.g., in-house solver',
                     operatingTemplate: 'Mach: 0.7\nRe: 1e6\nTemperature[K]: 300\nTimeStep[s]: 1e-5'
                 },
                 experimental: {
@@ -451,6 +452,18 @@
                         boundary_layer: ['oil_film_interferometry'],
                         wake: ['surface_pressure_measurements']
                     },
+                    facilityOptions: [
+                        '10x5 Wind Tunnel',
+                        'T1 Wind Tunnel',
+                        'T2 Wind Tunnel',
+                        '18" Closed-circuit Wind Tunnel',
+                        'Supersonic Wind Tunnel',
+                        'Hypersonic GUn Tunnel',
+                        '18" Open Jet Wind Tunnel with Centrigual Fan',
+                        '10" FloTek Open Jet Wind Tunnel',
+                        '9m Water Channel',
+                        'Hydrodynamics Flume'
+                    ],
                     extraQuantities: ['measurement_uncertainty', 'signal_to_noise_ratio'],
                     dataAcquisition: [
                         { value: 'time_resolved', label: 'Time Resolved' },
@@ -459,8 +472,8 @@
                         { value: 'phase_locked', label: 'Phase Locked' }
                     ],
                     facilityLabel: 'Facility Name',
-                    facilityHelp: 'Name of experimental facility (e.g., 10x5 wind tunnel, combustion rig).',
-                    facilityPlaceholder: 'e.g., 10x5 wind tunnel, closed-loop water channel',
+                    facilityHelp: 'Select the experimental facility. Choose "Other (specify below)" for a custom facility.',
+                    facilityPlaceholder: 'e.g., custom test rig',
                     operatingTemplate: 'Freestream_velocity[m/s]: 25\nReynolds_number: 5e5\nTemperature[C]: 20\nPressure[Pa]: 101325'
                 }
             },
@@ -471,6 +484,7 @@
                         composites: ['progressive_damage_model', 'cohesive_zone_model'],
                         aeroelasticity: ['frequency_domain_solver', 'time_domain_solver']
                     },
+                    facilityOptions: ['Abaqus', 'Nastran', 'Ansys Mechanical'],
                     extraQuantities: ['eigenvalues', 'eigenvectors', 'mode_shapes'],
                     dataAcquisition: [
                         { value: 'time_resolved', label: 'Time Resolved' },
@@ -479,8 +493,8 @@
                         { value: 'spatial_resolved', label: 'Spatial Resolved' }
                     ],
                     facilityLabel: 'Code Name',
-                    facilityHelp: 'Name of computational solver/setup (e.g., Abaqus, Nastran, in-house FEM code).',
-                    facilityPlaceholder: 'e.g., Abaqus, Nastran, in-house FEM solver',
+                    facilityHelp: 'Select the computational code. Choose "Other (specify below)" for a custom solver/setup.',
+                    facilityPlaceholder: 'e.g., in-house FEM solver',
                     operatingTemplate: 'Dynamic_pressure[Pa]: 500\nReduced_frequency: 0.1\nMach: 0.3\nTimeStep[s]: 1e-4'
                 },
                 experimental: {
@@ -489,6 +503,22 @@
                         composites: ['ultrasonic_C_scan', 'acoustic_emission'],
                         fracture_fatigue: ['crack_gauge', 'compliance_method']
                     },
+                    facilityOptions: [
+                        '250kN Instron (9585) Test Machine',
+                        '50kN Instro (5959) Test Machine',
+                        '250kN Instron (8802) Hydraulic Test Machine',
+                        'Instron 100kN Hydraulic Fatigue Machine',
+                        'Instro 25kN High Rate Hydraulic Test Machine',
+                        '10kN Instron ElectroPuls E10000',
+                        'Instron 1800J Drop Tower (Ceast 9350)',
+                        'Custom Built Compression Frame',
+                        'TA Instruments RSA-G2 DMTA',
+                        'Custom Built 250 Tonne Hyper Stiff Compression Machine',
+                        'Custom Built Gas Gun 50mm bore up to 1200m/s',
+                        'Custom Built Gas Gun 25mm bore up to 500 m/s',
+                        'Aramis 3D Digital Image Correlation System',
+                        'Mistras Acoustic Emission System'
+                    ],
                     extraQuantities: ['measurement_uncertainty', 'signal_to_noise_ratio'],
                     dataAcquisition: [
                         { value: 'time_resolved', label: 'Time Resolved' },
@@ -497,8 +527,8 @@
                         { value: 'phase_locked', label: 'Phase Locked' }
                     ],
                     facilityLabel: 'Facility/Lab Name',
-                    facilityHelp: 'Name of lab or rig (e.g., structural dynamics lab, fatigue rig, wind tunnel section).',
-                    facilityPlaceholder: 'e.g., fatigue rig, structures lab, aeroelastic wind tunnel',
+                    facilityHelp: 'Select the facility/lab setup. Choose "Other (specify below)" for a custom facility.',
+                    facilityPlaceholder: 'e.g., custom structures lab setup',
                     operatingTemplate: 'Load[N]: 1000\nFrequency[Hz]: 20\nTemperature[C]: 22\nHumidity[%]: 40'
                 }
             }
@@ -1004,6 +1034,13 @@
             return uniqueList(selectedValues.concat(otherValues));
         }
 
+        function collectSingleValueWithOther(selectElement, otherInputElement) {
+            if (isOtherSelected(selectElement)) {
+                return otherInputElement.value.trim();
+            }
+            return (selectElement.value && selectElement.value !== '__other__') ? selectElement.value : '';
+        }
+
         function getModelPlaceholder(discipline, field) {
             if (discipline === 'fluid_dynamics') {
                 if (field === 'combustion') return 'e.g., swirl burner, bluff-body combustor';
@@ -1372,8 +1409,10 @@
                 '    <option value="experimental">Experimental</option>' +
                 '  </select>' +
                 '  <label class="required obs-facility-label">Code or Facility Name</label>' +
-                '  <input type="text" class="obs-facility" required placeholder="e.g., Nektar++, wind tunnel A">' +
+                '  <select class="obs-facility" required></select>' +
                 '  <div class="help-text obs-facility-help">Set by observation type.</div>' +
+                '  <label class="hidden obs-other-facility-label">Other Code/Facility Name</label>' +
+                '  <input type="text" class="hidden obs-other-facility" placeholder="e.g., custom in-house setup">' +
                 '  <label>Methods (select one or more)</label>' +
                 '  <select class="obs-methods" multiple size="8"></select>' +
                 '  <div class="help-text">Filtered by discipline, field, and observation type.</div>' +
@@ -1425,6 +1464,14 @@
                 refreshObservationCard(card);
             });
 
+            card.querySelector('.obs-facility').addEventListener('change', function() {
+                toggleOtherInput(
+                    card.querySelector('.obs-facility'),
+                    card.querySelector('.obs-other-facility-label'),
+                    card.querySelector('.obs-other-facility')
+                );
+            });
+
             card.querySelector('.obs-methods').addEventListener('change', function() {
                 toggleOtherInput(
                     card.querySelector('.obs-methods'),
@@ -1445,7 +1492,7 @@
 
             if (initialData) {
                 card.querySelector('.obs-type').value = initialData.observation_type || '';
-                card.querySelector('.obs-facility').value = initialData.facility || '';
+                card.dataset.initialFacility = initialData.facility || '';
             }
 
             refreshObservationCard(card);
@@ -1484,24 +1531,32 @@
             const fieldConfig = fieldContext.fieldConfig;
 
             const observationTypeElement = card.querySelector('.obs-type');
+            const facilityElement = card.querySelector('.obs-facility');
+            const otherFacilityLabel = card.querySelector('.obs-other-facility-label');
+            const otherFacilityInput = card.querySelector('.obs-other-facility');
             const methodsElement = card.querySelector('.obs-methods');
             const observedQuantitiesElement = card.querySelector('.obs-observed-quantities');
             const dataAcquisitionElement = card.querySelector('.obs-data-acquisition');
 
             const observationType = observationTypeElement.value;
             const observationConfig = OBSERVATION_CONFIG[discipline] && OBSERVATION_CONFIG[discipline][observationType];
+            const initialFacility = Object.prototype.hasOwnProperty.call(card.dataset, 'initialFacility')
+                ? card.dataset.initialFacility
+                : null;
 
             if (!observationConfig) {
+                setSelectOptions(facilityElement, [], { includeBlank: true, includeOther: false, preserveSelection: false });
                 setSelectOptions(methodsElement, [], { includeBlank: false, includeOther: true, preserveSelection: false });
                 setSelectOptions(observedQuantitiesElement, [], { includeBlank: false, includeOther: true, preserveSelection: false });
                 setSelectOptions(dataAcquisitionElement, [], { includeBlank: true, includeOther: false, preserveSelection: false });
 
                 card.querySelector('.obs-facility-label').textContent = 'Code or Facility Name';
                 card.querySelector('.obs-facility-help').textContent = 'Select observation type to constrain options.';
-                card.querySelector('.obs-facility').placeholder = 'e.g., Nektar++, wind tunnel, structures lab';
+                otherFacilityInput.placeholder = 'e.g., Nektar++, wind tunnel, structures lab';
                 card.querySelector('.obs-operating-conditions').placeholder = 'Parameter: value';
                 card.querySelector('.obs-operating-hint').textContent = 'Select observation type for suggested keys.';
 
+                toggleOtherInput(facilityElement, otherFacilityLabel, otherFacilityInput);
                 toggleOtherInput(methodsElement, card.querySelector('.obs-other-methods-label'), card.querySelector('.obs-other-methods'));
                 toggleOtherInput(observedQuantitiesElement, card.querySelector('.obs-other-observed-label'), card.querySelector('.obs-other-observed'));
                 return;
@@ -1510,7 +1565,9 @@
             const fieldMethods = (observationConfig.fieldMethods && observationConfig.fieldMethods[field]) || [];
             const methods = uniqueList(observationConfig.methods.concat(fieldMethods));
             const observedQuantities = uniqueList(fieldConfig.observedQuantities.concat(observationConfig.extraQuantities || []));
+            const facilityOptions = observationConfig.facilityOptions || [];
 
+            setSelectOptions(facilityElement, facilityOptions, { includeBlank: true, includeOther: true, preserveSelection: true });
             setSelectOptions(methodsElement, methods, { includeBlank: false, includeOther: true, preserveSelection: true });
             setSelectOptions(observedQuantitiesElement, observedQuantities, { includeBlank: false, includeOther: true, preserveSelection: true });
 
@@ -1526,13 +1583,27 @@
 
             card.querySelector('.obs-facility-label').textContent = observationConfig.facilityLabel;
             card.querySelector('.obs-facility-help').textContent = observationConfig.facilityHelp;
-            card.querySelector('.obs-facility').placeholder = observationConfig.facilityPlaceholder;
+            otherFacilityInput.placeholder = observationConfig.facilityPlaceholder;
             card.querySelector('.obs-operating-conditions').placeholder = observationConfig.operatingTemplate;
             card.querySelector('.obs-operating-hint').textContent =
                 'Suggested keys: ' + observationConfig.operatingTemplate.split('\n').map(function(line) {
                     return line.split(':')[0];
                 }).join(', ');
 
+            if (initialFacility !== null) {
+                const hasInitialOption = Array.from(facilityElement.options).some(function(option) {
+                    return option.value === initialFacility;
+                });
+                if (hasInitialOption) {
+                    facilityElement.value = initialFacility;
+                } else if (initialFacility) {
+                    facilityElement.value = '__other__';
+                    otherFacilityInput.value = initialFacility;
+                }
+                delete card.dataset.initialFacility;
+            }
+
+            toggleOtherInput(facilityElement, otherFacilityLabel, otherFacilityInput);
             toggleOtherInput(methodsElement, card.querySelector('.obs-other-methods-label'), card.querySelector('.obs-other-methods'));
             toggleOtherInput(observedQuantitiesElement, card.querySelector('.obs-other-observed-label'), card.querySelector('.obs-other-observed'));
         }
@@ -1742,6 +1813,7 @@
             observationCards.forEach(function(card, index) {
                 const typeElement = card.querySelector('.obs-type');
                 const facilityElement = card.querySelector('.obs-facility');
+                const otherFacilityInput = card.querySelector('.obs-other-facility');
                 const methodsElement = card.querySelector('.obs-methods');
                 const otherMethodsInput = card.querySelector('.obs-other-methods');
                 const observedElement = card.querySelector('.obs-observed-quantities');
@@ -1756,6 +1828,11 @@
                 if (!facilityElement.value.trim()) {
                     errors.push('Observation ' + (index + 1) + ': facility/code name is required.');
                     facilityElement.classList.add('invalid');
+                }
+
+                if (isOtherSelected(facilityElement) && !otherFacilityInput.value.trim()) {
+                    errors.push('Observation ' + (index + 1) + ': provide a value for Other Code/Facility Name.');
+                    otherFacilityInput.classList.add('invalid');
                 }
 
                 if (isOtherSelected(methodsElement) && parseCommaList(otherMethodsInput.value).length === 0) {
@@ -1923,7 +2000,10 @@
             return Array.from(document.querySelectorAll('.observation-card')).map(function(card) {
                 const observation = {
                     observation_type: card.querySelector('.obs-type').value,
-                    facility: card.querySelector('.obs-facility').value.trim(),
+                    facility: collectSingleValueWithOther(
+                        card.querySelector('.obs-facility'),
+                        card.querySelector('.obs-other-facility')
+                    ),
                     observed_quantities: collectControlledValues(
                         card.querySelector('.obs-observed-quantities'),
                         card.querySelector('.obs-other-observed')
