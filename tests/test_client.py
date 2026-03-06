@@ -28,11 +28,35 @@ def test_transform_to_invenio_format_enables_files_section(valid_metadata: dict)
 def test_transform_to_invenio_format_preserves_optional_fields(valid_metadata: dict):
     valid_metadata["rights"] = [{"id": "cc-by-4.0"}]
     valid_metadata["funding"] = [{"funder": {"name": "Example Funder"}}]
+    valid_metadata["publisher"] = "Imperial College London"
+    valid_metadata["version"] = "v1.2"
+    valid_metadata["contributors"] = [
+        {
+            "person_or_org": {
+                "type": "personal",
+                "given_name": "Grace",
+                "family_name": "Hopper",
+            },
+            "role": {"id": "datacurator"},
+        }
+    ]
+    valid_metadata["related_identifiers"] = [
+        {
+            "identifier": "10.9999/example",
+            "scheme": "doi",
+            "relation_type": {"id": "ispartof"},
+            "resource_type": {"id": "publication"},
+        }
+    ]
     client = InvenioClient("https://example.org", "token")
 
     payload = client._transform_to_invenio_format(valid_metadata)
     assert payload["metadata"]["rights"] == valid_metadata["rights"]
     assert payload["metadata"]["funding"] == valid_metadata["funding"]
+    assert payload["metadata"]["publisher"] == valid_metadata["publisher"]
+    assert payload["metadata"]["version"] == valid_metadata["version"]
+    assert payload["metadata"]["contributors"] == valid_metadata["contributors"]
+    assert payload["metadata"]["related_identifiers"] == valid_metadata["related_identifiers"]
 
 
 def test_create_client_from_env_requires_url(monkeypatch):

@@ -23,7 +23,6 @@ pip install -e .
 ae-upload configure
 ae-upload export-form --output metadata_form.html
 # open metadata_form.html in your browser and download metadata.json
-# alternative: ae-upload generate numerical  # or: experimental
 ae-upload validate metadata.json
 ae-upload upload ./my_data_directory         # creates draft by default
 # ae-upload upload ./my_data_directory --publish

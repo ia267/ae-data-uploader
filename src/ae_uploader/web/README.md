@@ -13,9 +13,10 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 1. **Fill Form**: Open the HTML form and fill in your dataset details
    - Core metadata (title, description, date)
    - Creators (add multiple with + button)
+   - Contributors (optional)
    - Domain information (discipline, field, keywords)
    - Observations (numerical or experimental)
-   - Optional: License information
+   - Optional: Related identifiers, funding, and license
 
 2. **Download JSON**: Click "Download metadata.json"
    - Browser will download the generated file
@@ -35,10 +36,12 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 ## Features
 
 - **Dynamic Fields**: Add multiple creators and observations
+- **Contributor Support**: Add contributor roles separate from creators
 - **Smart Validation**: Required fields marked with asterisk (*)
 - **Dropdown Menus**: Pre-populated with valid values from schema
 - **Keyword Autocomplete**: Suggests canonical keywords as users type
 - **Keyword Normalisation**: Deduplicates common variants (e.g., `high-Re` vs `high Re`)
+- **Single-Place Entry**: Includes key generic Invenio fields (publisher, version, contributors, related identifiers, funding)
 - **Conditional Sections**: File information appears for both numerical and experimental
 - **Real-time Preview**: Form validates as you type
 - **Mobile Responsive**: Works on phones and tablets
@@ -50,7 +53,9 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 - Title (3-255 characters)
 - Description (minimum 10 characters)
 - Publication Date
-- Resource Type (dataset, publication, software, other)
+- Publisher (optional)
+- Version (optional)
+- Resource Type (Invenio-aligned list, including dataset/publication/software and subtypes)
 
 ### Creators
 - First Name
@@ -58,11 +63,19 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 - Affiliation (optional)
 - Add multiple creators with "+ Add Creator" button
 
+### Contributors (Optional)
+- First Name
+- Last Name
+- Affiliation
+- Identifier scheme + identifier
+- Contributor role
+- Add multiple contributors with "+ Add Contributor" button
+
 ### Domain Information
 - Discipline (fluid_dynamics, structures)
 - Field (jet, boundary_layer, wake, combustion, other)
 - Keywords (comma-separated)
-- Flow Regime (optional)
+- Flow Regime(s) (optional, multi-select)
 
 ### Observations
 - Observation Type (numerical, experimental)
@@ -73,12 +86,22 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
   - File name pattern
   - File type
   - Variables
-  - Storage format
 
 ### License (Optional)
 - Creative Commons licenses
 - MIT
 - Or leave blank
+
+### Funding (Optional)
+- Funder name
+- Award/grant number
+
+### Related Identifiers (Optional)
+- Identifier (e.g., DOI/URL)
+- Scheme
+- Relation type
+- Related resource type
+- Description
 
 ## Tips
 

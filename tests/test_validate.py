@@ -24,6 +24,45 @@ def test_validate_metadata_accepts_valid_payload(valid_metadata: dict):
     assert errors == []
 
 
+def test_validate_metadata_accepts_contributors_and_related_identifiers(valid_metadata: dict):
+    valid_metadata["contributors"] = [
+        {
+            "person_or_org": {
+                "type": "personal",
+                "given_name": "Grace",
+                "family_name": "Hopper",
+                "identifiers": [
+                    {
+                        "scheme": "orcid",
+                        "identifier": "0000-0001-5000-0007",
+                    }
+                ],
+            },
+            "role": {"id": "datacurator"},
+        }
+    ]
+    valid_metadata["related_identifiers"] = [
+        {
+            "identifier": "10.9999/example",
+            "scheme": "doi",
+            "relation_type": {"id": "ispartof"},
+            "resource_type": {"id": "publication"},
+        }
+    ]
+
+    is_valid, errors = validate_metadata(valid_metadata)
+    assert is_valid is True
+    assert errors == []
+
+
+def test_validate_metadata_accepts_multiple_regimes(valid_metadata: dict):
+    valid_metadata["domain"]["study"]["regime"] = ["compressible", "high_Re"]
+
+    is_valid, errors = validate_metadata(valid_metadata)
+    assert is_valid is True
+    assert errors == []
+
+
 def test_validate_metadata_rejects_missing_required_field(valid_metadata: dict):
     valid_metadata.pop("title")
     is_valid, errors = validate_metadata(valid_metadata)

@@ -5,50 +5,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AE Datastore Metadata Form</title>
     <style>
+        :root {
+            --page-bg: #e9ecef;
+            --panel-bg: #f7f8fa;
+            --card-bg: #ffffff;
+            --line: #d0d6de;
+            --text: #2d2d2d;
+            --muted: #6d7580;
+            --primary: #1678c2;
+            --primary-dark: #0f67ab;
+            --danger: #c0392b;
+            --danger-dark: #a63125;
+            --secondary: #97a1ad;
+            --secondary-dark: #7f8994;
+            --warning-bg: #f4efe3;
+            --warning-line: #cab88f;
+            --success-bg: #def2de;
+            --success-line: #8cc58c;
+        }
         body {
-            font-family: Arial, sans-serif;
-            max-width: 960px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1120px;
+            margin: 24px auto 56px;
+            padding: 0 18px;
+            background-color: var(--page-bg);
+            color: var(--text);
+        }
+        h1 {
+            margin: 0 0 8px;
+            color: #263238;
+            font-size: 30px;
+            font-weight: 650;
+        }
+        p {
+            margin: 0 0 8px;
+        }
+        #metadataForm {
+            margin-top: 18px;
         }
         .form-section {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: var(--panel-bg);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            margin-bottom: 16px;
+            padding: 0 16px 16px;
         }
-        h1 { color: #333; }
-        h2 { color: #666; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-        h3 { color: #555; margin-top: 16px; margin-bottom: 8px; }
-        h4 { color: #666; margin-top: 12px; margin-bottom: 6px; }
+        .form-section > h2,
+        #output > h2 {
+            margin: 0 -16px 14px;
+            background: var(--primary);
+            color: #fff;
+            padding: 12px 14px;
+            font-size: 27px;
+            font-weight: 500;
+            border-radius: 3px 3px 0 0;
+        }
+        .form-section > h2::after {
+            content: "▾";
+            float: right;
+            font-size: 14px;
+            opacity: 0.95;
+            margin-top: 4px;
+        }
+        .form-section > h2.accordion-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        .form-section > h2.accordion-header:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.9);
+            outline-offset: -2px;
+        }
+        .form-section.collapsed {
+            padding-bottom: 0;
+        }
+        .form-section.collapsed > h2 {
+            margin-bottom: 0;
+            border-radius: 3px;
+        }
+        .form-section.collapsed > h2::after {
+            content: "▸";
+        }
+        .form-section.collapsed > :not(h2) {
+            display: none;
+        }
+        h3 {
+            color: #354553;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        h4 {
+            color: #4f5f6f;
+            margin-top: 12px;
+            margin-bottom: 6px;
+            font-size: 18px;
+            font-weight: 600;
+        }
         label {
             display: block;
             margin-top: 12px;
-            font-weight: bold;
-            color: #555;
+            font-weight: 600;
+            color: #2f3b46;
         }
         input, textarea, select {
             width: 100%;
-            padding: 8px;
+            padding: 8px 10px;
             margin-top: 5px;
-            border: 1px solid #ddd;
+            border: 1px solid #c8cfd7;
             border-radius: 4px;
             box-sizing: border-box;
+            background: #fff;
+            color: #2a2f33;
+            font-size: 15px;
+        }
+        input, select {
+            min-height: 38px;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #5a9ed8;
+            box-shadow: 0 0 0 2px rgba(22, 120, 194, 0.15);
         }
         select[multiple] {
             min-height: 130px;
         }
         textarea {
             min-height: 60px;
-            font-family: monospace;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
         }
         .help-text {
-            font-size: 0.9em;
-            color: #666;
-            font-style: italic;
-            margin-top: 3px;
+            font-size: 0.89em;
+            color: var(--muted);
+            margin-top: 4px;
         }
         .keyword-input-wrapper {
             position: relative;
@@ -60,7 +149,7 @@
             right: 0;
             z-index: 1000;
             background: #fff;
-            border: 1px solid #d9d9d9;
+            border: 1px solid var(--line);
             border-radius: 4px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
             max-height: 180px;
@@ -89,45 +178,45 @@
         }
         .required::after {
             content: " *";
-            color: #c62828;
+            color: var(--danger);
         }
         .hidden {
             display: none;
         }
         .invalid {
-            border-color: #b00020 !important;
+            border-color: var(--danger) !important;
         }
         .error-box {
             display: none;
-            background: #fdecea;
-            color: #7f1d1d;
-            border: 1px solid #f5c2c7;
+            background: #fbe8e7;
+            color: #7a2017;
+            border: 1px solid #efc6c2;
             padding: 12px;
-            border-radius: 6px;
+            border-radius: 4px;
             margin-bottom: 16px;
         }
         .card-list {
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 10px;
             margin-top: 10px;
         }
         .card {
-            border: 1px solid #d9d9d9;
-            border-radius: 6px;
-            padding: 14px;
-            background: #fafafa;
+            border: 1px solid #d8dee6;
+            border-radius: 4px;
+            padding: 12px;
+            background: var(--card-bg);
         }
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 10px;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
         }
         .card-title {
             margin: 0;
-            color: #333;
+            color: #2f3b46;
         }
         .button-group {
             display: flex;
@@ -135,70 +224,112 @@
             flex-wrap: wrap;
             margin-top: 12px;
         }
+        .button-group.form-actions {
+            justify-content: flex-end;
+        }
         button {
-            background-color: #007bff;
+            background-color: var(--primary);
             color: white;
-            padding: 10px 18px;
-            border: none;
+            padding: 9px 16px;
+            border: 1px solid transparent;
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: var(--primary-dark);
         }
         .btn-secondary {
-            background-color: #6c757d;
+            background-color: var(--secondary);
         }
         .btn-secondary:hover {
-            background-color: #5a6268;
+            background-color: var(--secondary-dark);
         }
         .btn-danger {
-            background-color: #c62828;
+            background-color: var(--danger);
         }
         .btn-danger:hover {
-            background-color: #9f1f1f;
+            background-color: var(--danger-dark);
         }
         .btn-small {
             font-size: 12px;
             padding: 6px 10px;
         }
         .note {
-            background: #eef5ff;
-            color: #174a7a;
-            border: 1px solid #cfe2ff;
-            border-radius: 6px;
+            background: var(--warning-bg);
+            color: #705522;
+            border: 1px solid var(--warning-line);
+            border-radius: 4px;
             padding: 10px;
-            margin-top: 10px;
+            margin-top: 8px;
             font-size: 0.95em;
         }
+        .note::before {
+            content: "Warning: ";
+            font-weight: 700;
+        }
         #output {
-            background: #f8f9fa;
-            padding: 15px;
+            background: var(--panel-bg);
+            border: 1px solid var(--line);
             border-radius: 4px;
+            padding: 0 16px 16px;
             margin-top: 20px;
             display: none;
+        }
+        #output > h2 {
+            margin: 0 -16px 14px;
+        }
+        .output-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
         }
         pre {
             background: #fff;
             padding: 15px;
             border-radius: 4px;
             overflow-x: auto;
-            border: 1px solid #ddd;
+            border: 1px solid #d1d8e0;
         }
         .success {
-            background: #d4edda;
-            color: #155724;
+            background: var(--success-bg);
+            color: #1f5e1f;
+            border: 1px solid var(--success-line);
             padding: 15px;
             border-radius: 4px;
             margin-top: 10px;
+        }
+        @media (max-width: 760px) {
+            body {
+                margin: 14px auto 24px;
+                padding: 0 10px;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            .form-section > h2,
+            #output > h2 {
+                font-size: 20px;
+            }
+            .button-group {
+                flex-direction: column;
+            }
+            .button-group button {
+                width: 100%;
+            }
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
 <body>
     <h1>AE Datastore Metadata Form</h1>
     <p>Fill in this form to generate valid JSON metadata for InvenioRDM upload.</p>
-    <p style="margin-top: 10px; color: #666;">Supports fluid mechanics and structures datasets using study metadata plus one or more observations.</p>
+    <p class="help-text">Supports fluid mechanics and structures datasets using study metadata plus one or more observations.</p>
 
     <form id="metadataForm">
         <div id="validationErrors" class="error-box" aria-live="polite"></div>
@@ -216,11 +347,29 @@
 
             <label for="publicationDate" class="required">Publication Date</label>
             <input type="date" id="publicationDate" required>
+            <div class="help-text">Use the date you want shown as the dataset publication date.</div>
+
+            <label for="publisher">Publisher (optional)</label>
+            <input type="text" id="publisher" placeholder="e.g., Imperial College London">
+
+            <label for="version">Version (optional)</label>
+            <input type="text" id="version" placeholder="e.g., v1.0, 2026.03">
+
+            <label for="resourceType" class="required">Resource Type</label>
+            <select id="resourceType" required></select>
+            <div class="help-text">Uses the same vocabulary style as Invenio resource types.</div>
 
             <h3>Creators</h3>
             <div id="creatorsContainer" class="card-list"></div>
             <div class="button-group">
                 <button type="button" id="addCreatorBtn" class="btn-secondary">Add Creator</button>
+            </div>
+
+            <h3>Contributors (Optional)</h3>
+            <div class="help-text">Use this for people who contributed but are not primary creators (e.g., data curator, supervisor).</div>
+            <div id="contributorsContainer" class="card-list"></div>
+            <div class="button-group">
+                <button type="button" id="addContributorBtn" class="btn-secondary">Add Contributor</button>
             </div>
         </div>
 
@@ -246,11 +395,11 @@
                 <label for="otherSubfield" id="otherSubfieldLabel" class="hidden">Other Subfield (comma-separated)</label>
                 <input type="text" id="otherSubfield" class="hidden" placeholder="e.g., wall_transpiration, bonded_joint">
 
-                <label for="regime">Regime</label>
-                <select id="regime"></select>
-                <div class="help-text">Choose a regime suggested for the selected field.</div>
+                <label for="regime">Regime (select one or more)</label>
+                <select id="regime" multiple size="6"></select>
+                <div class="help-text">Choose one or more regimes suggested for the selected field. Use Ctrl/Cmd for multi-select.</div>
 
-                <label for="otherRegime" id="otherRegimeLabel" class="hidden">Other Regime</label>
+                <label for="otherRegime" id="otherRegimeLabel" class="hidden">Other Regime (comma-separated)</label>
                 <input type="text" id="otherRegime" class="hidden" placeholder="e.g., strongly coupled nonlinear">
 
                 <label for="model">Model</label>
@@ -283,6 +432,27 @@
         </div>
 
         <div class="form-section">
+            <h2>Funding (Optional)</h2>
+
+            <label for="funderName">Funder Name</label>
+            <input type="text" id="funderName" placeholder="e.g., UKRI EPSRC">
+
+            <label for="awardNumber">Award/Grant Number</label>
+            <input type="text" id="awardNumber" placeholder="e.g., EP/X012345/1">
+            <div class="help-text">If provided, funding information is added to Invenio metadata.</div>
+        </div>
+
+        <div class="form-section">
+            <h2>Related Identifiers (Optional)</h2>
+            <div class="help-text">Link this record to related datasets, software, publications, reports, or other outputs.</div>
+
+            <div id="relatedIdentifiersContainer" class="card-list"></div>
+            <div class="button-group">
+                <button type="button" id="addRelatedIdentifierBtn" class="btn-secondary">Add Related Identifier</button>
+            </div>
+        </div>
+
+        <div class="form-section">
             <h2>License (Optional)</h2>
 
             <label for="license">License</label>
@@ -299,17 +469,19 @@
             This form supports multiple creators and multiple observations for both fluid_dynamics and structures.
         </div>
 
-        <div class="button-group">
-            <button type="button" onclick="resetForm()">Reset Form</button>
+        <div class="button-group form-actions">
+            <button type="button" class="btn-secondary" onclick="resetForm()">Reset Form</button>
             <button type="submit">Download metadata.json</button>
         </div>
     </form>
 
     <div id="output">
         <h2>Generated JSON Metadata</h2>
-        <button onclick="copyToClipboard()" style="float: right;">Copy JSON</button>
+        <div class="output-actions">
+            <button type="button" onclick="copyToClipboard()">Copy JSON</button>
+        </div>
         <pre id="jsonOutput"></pre>
-        <button onclick="downloadJSON()">Download JSON File</button>
+        <button type="button" onclick="downloadJSON()">Download JSON File</button>
     </div>
 
     <script>
@@ -393,6 +565,7 @@
                         boundary_layer: ['wall_resolved_LES'],
                         wake: ['immersed_boundary_method']
                     },
+                    facilityOptions: ['Nektar++', 'Xcompact3D', 'PyFR', 'OpenFOAM', 'Star-CCM+', 'Ansys Fluent'],
                     extraQuantities: ['residuals', 'turbulent_kinetic_energy', 'dissipation_rate'],
                     dataAcquisition: [
                         { value: 'time_resolved', label: 'Time Resolved' },
@@ -401,8 +574,8 @@
                         { value: 'spatial_resolved', label: 'Spatial Resolved' }
                     ],
                     facilityLabel: 'Code Name',
-                    facilityHelp: 'Name of computational code or solver setup (e.g., Nektar++, OpenFOAM, BOFFIN).',
-                    facilityPlaceholder: 'e.g., Nektar++, OpenFOAM, in-house solver',
+                    facilityHelp: 'Select the computational code. Choose "Other (specify below)" for a custom solver/setup.',
+                    facilityPlaceholder: 'e.g., in-house solver',
                     operatingTemplate: 'Mach: 0.7\nRe: 1e6\nTemperature[K]: 300\nTimeStep[s]: 1e-5'
                 },
                 experimental: {
@@ -412,6 +585,18 @@
                         boundary_layer: ['oil_film_interferometry'],
                         wake: ['surface_pressure_measurements']
                     },
+                    facilityOptions: [
+                        '10x5 Wind Tunnel',
+                        'T1 Wind Tunnel',
+                        'T2 Wind Tunnel',
+                        '18" Closed-circuit Wind Tunnel',
+                        'Supersonic Wind Tunnel',
+                        'Hypersonic GUn Tunnel',
+                        '18" Open Jet Wind Tunnel with Centrigual Fan',
+                        '10" FloTek Open Jet Wind Tunnel',
+                        '9m Water Channel',
+                        'Hydrodynamics Flume'
+                    ],
                     extraQuantities: ['measurement_uncertainty', 'signal_to_noise_ratio'],
                     dataAcquisition: [
                         { value: 'time_resolved', label: 'Time Resolved' },
@@ -420,8 +605,8 @@
                         { value: 'phase_locked', label: 'Phase Locked' }
                     ],
                     facilityLabel: 'Facility Name',
-                    facilityHelp: 'Name of experimental facility (e.g., 10x5 wind tunnel, combustion rig).',
-                    facilityPlaceholder: 'e.g., 10x5 wind tunnel, closed-loop water channel',
+                    facilityHelp: 'Select the experimental facility. Choose "Other (specify below)" for a custom facility.',
+                    facilityPlaceholder: 'e.g., custom test rig',
                     operatingTemplate: 'Freestream_velocity[m/s]: 25\nReynolds_number: 5e5\nTemperature[C]: 20\nPressure[Pa]: 101325'
                 }
             },
@@ -432,6 +617,7 @@
                         composites: ['progressive_damage_model', 'cohesive_zone_model'],
                         aeroelasticity: ['frequency_domain_solver', 'time_domain_solver']
                     },
+                    facilityOptions: ['Abaqus', 'Nastran', 'Ansys Mechanical'],
                     extraQuantities: ['eigenvalues', 'eigenvectors', 'mode_shapes'],
                     dataAcquisition: [
                         { value: 'time_resolved', label: 'Time Resolved' },
@@ -440,8 +626,8 @@
                         { value: 'spatial_resolved', label: 'Spatial Resolved' }
                     ],
                     facilityLabel: 'Code Name',
-                    facilityHelp: 'Name of computational solver/setup (e.g., Abaqus, Nastran, in-house FEM code).',
-                    facilityPlaceholder: 'e.g., Abaqus, Nastran, in-house FEM solver',
+                    facilityHelp: 'Select the computational code. Choose "Other (specify below)" for a custom solver/setup.',
+                    facilityPlaceholder: 'e.g., in-house FEM solver',
                     operatingTemplate: 'Dynamic_pressure[Pa]: 500\nReduced_frequency: 0.1\nMach: 0.3\nTimeStep[s]: 1e-4'
                 },
                 experimental: {
@@ -450,6 +636,22 @@
                         composites: ['ultrasonic_C_scan', 'acoustic_emission'],
                         fracture_fatigue: ['crack_gauge', 'compliance_method']
                     },
+                    facilityOptions: [
+                        '250kN Instron (9585) Test Machine',
+                        '50kN Instro (5959) Test Machine',
+                        '250kN Instron (8802) Hydraulic Test Machine',
+                        'Instron 100kN Hydraulic Fatigue Machine',
+                        'Instro 25kN High Rate Hydraulic Test Machine',
+                        '10kN Instron ElectroPuls E10000',
+                        'Instron 1800J Drop Tower (Ceast 9350)',
+                        'Custom Built Compression Frame',
+                        'TA Instruments RSA-G2 DMTA',
+                        'Custom Built 250 Tonne Hyper Stiff Compression Machine',
+                        'Custom Built Gas Gun 50mm bore up to 1200m/s',
+                        'Custom Built Gas Gun 25mm bore up to 500 m/s',
+                        'Aramis 3D Digital Image Correlation System',
+                        'Mistras Acoustic Emission System'
+                    ],
                     extraQuantities: ['measurement_uncertainty', 'signal_to_noise_ratio'],
                     dataAcquisition: [
                         { value: 'time_resolved', label: 'Time Resolved' },
@@ -458,8 +660,8 @@
                         { value: 'phase_locked', label: 'Phase Locked' }
                     ],
                     facilityLabel: 'Facility/Lab Name',
-                    facilityHelp: 'Name of lab or rig (e.g., structural dynamics lab, fatigue rig, wind tunnel section).',
-                    facilityPlaceholder: 'e.g., fatigue rig, structures lab, aeroelastic wind tunnel',
+                    facilityHelp: 'Select the facility/lab setup. Choose "Other (specify below)" for a custom facility.',
+                    facilityPlaceholder: 'e.g., custom structures lab setup',
                     operatingTemplate: 'Load[N]: 1000\nFrequency[Hz]: 20\nTemperature[C]: 22\nHumidity[%]: 40'
                 }
             }
@@ -508,12 +710,110 @@
 
         const KEYWORD_CATALOG = buildKeywordCatalog();
         const KEYWORD_MAX_SUGGESTIONS = 8;
+        const INVENIO_RESOURCE_TYPES = [
+            { id: 'audio', label: 'Audio' },
+            { id: 'dataset', label: 'Dataset' },
+            { id: 'event', label: 'Event' },
+            { id: 'image', label: 'Image' },
+            { id: 'image-diagram', label: 'Image / Diagram' },
+            { id: 'image-drawing', label: 'Image / Drawing' },
+            { id: 'image-figure', label: 'Image / Figure' },
+            { id: 'image-other', label: 'Image / Other' },
+            { id: 'image-photo', label: 'Image / Photo' },
+            { id: 'image-plot', label: 'Image / Plot' },
+            { id: 'lesson', label: 'Lesson' },
+            { id: 'model', label: 'Model' },
+            { id: 'other', label: 'Other' },
+            { id: 'physicalobject', label: 'Physical object' },
+            { id: 'poster', label: 'Poster' },
+            { id: 'presentation', label: 'Presentation' },
+            { id: 'publication', label: 'Publication' },
+            { id: 'publication-annotationcollection', label: 'Publication / Annotation collection' },
+            { id: 'publication-book', label: 'Publication / Book' },
+            { id: 'publication-bookchapter', label: 'Publication / Book chapter' },
+            { id: 'publication-conferencepaper', label: 'Publication / Conference paper' },
+            { id: 'publication-conferenceproceeding', label: 'Publication / Conference proceeding' },
+            { id: 'publication-datapaper', label: 'Publication / Data paper' },
+            { id: 'publication-dissertation', label: 'Publication / Dissertation' },
+            { id: 'publication-journal', label: 'Publication / Journal' },
+            { id: 'publication-journalarticle', label: 'Publication / Journal article' },
+            { id: 'publication-other', label: 'Publication / Other' },
+            { id: 'publication-outputmanagementplan', label: 'Publication / Output management plan' },
+            { id: 'publication-patent', label: 'Publication / Patent' },
+            { id: 'publication-peerreview', label: 'Publication / Peer review' },
+            { id: 'publication-preprint', label: 'Publication / Preprint' },
+            { id: 'publication-projectdeliverable', label: 'Publication / Project deliverable' },
+            { id: 'publication-projectmilestone', label: 'Publication / Project milestone' },
+            { id: 'publication-proposal', label: 'Publication / Proposal' },
+            { id: 'publication-report', label: 'Publication / Report' },
+            { id: 'publication-softwaredocumentation', label: 'Publication / Software documentation' },
+            { id: 'publication-standard', label: 'Publication / Standard' },
+            { id: 'publication-taxonomictreatment', label: 'Publication / Taxonomic treatment' },
+            { id: 'publication-technicalnote', label: 'Publication / Technical note' },
+            { id: 'publication-thesis', label: 'Publication / Thesis' },
+            { id: 'publication-workingpaper', label: 'Publication / Working paper' },
+            { id: 'software', label: 'Software' },
+            { id: 'software-computationalnotebook', label: 'Software / Computational notebook' },
+            { id: 'video', label: 'Video' },
+            { id: 'workflow', label: 'Workflow' }
+        ];
 
         let creatorCounter = 0;
+        let contributorCounter = 0;
+        let relatedIdentifierCounter = 0;
         let observationCounter = 0;
+
+        function getSectionHeader(section) {
+            const firstChild = section.firstElementChild;
+            if (firstChild && firstChild.tagName === 'H2') {
+                return firstChild;
+            }
+            return section.querySelector('h2');
+        }
+
+        function setSectionCollapsed(section, collapsed) {
+            const header = getSectionHeader(section);
+            section.classList.toggle('collapsed', collapsed);
+            if (header) {
+                header.setAttribute('aria-expanded', String(!collapsed));
+            }
+        }
+
+        function expandAllAccordionSections() {
+            Array.from(document.querySelectorAll('#metadataForm .form-section')).forEach(function(section) {
+                setSectionCollapsed(section, false);
+            });
+        }
+
+        function initializeAccordionSections() {
+            Array.from(document.querySelectorAll('#metadataForm .form-section')).forEach(function(section) {
+                const header = getSectionHeader(section);
+                if (!header) {
+                    return;
+                }
+
+                header.classList.add('accordion-header');
+                header.setAttribute('role', 'button');
+                header.setAttribute('tabindex', '0');
+                header.setAttribute('aria-expanded', 'true');
+
+                const toggleSection = function() {
+                    setSectionCollapsed(section, !section.classList.contains('collapsed'));
+                };
+
+                header.addEventListener('click', toggleSection);
+                header.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleSection();
+                    }
+                });
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('publicationDate').valueAsDate = new Date();
+            populateTopLevelResourceTypes();
 
             document.getElementById('discipline').addEventListener('change', refreshStudyControls);
             document.getElementById('field').addEventListener('change', refreshStudyControls);
@@ -566,13 +866,22 @@
                 addCreator();
             });
 
+            document.getElementById('addContributorBtn').addEventListener('click', function() {
+                addContributor();
+            });
+
             document.getElementById('addObservationBtn').addEventListener('click', function() {
                 addObservation();
+            });
+
+            document.getElementById('addRelatedIdentifierBtn').addEventListener('click', function() {
+                addRelatedIdentifier();
             });
 
             document.getElementById('metadataForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 clearErrors();
+                expandAllAccordionSections();
 
                 if (!document.getElementById('metadataForm').checkValidity()) {
                     document.getElementById('metadataForm').reportValidity();
@@ -591,6 +900,7 @@
             addCreator();
             addObservation();
             refreshStudyControls();
+            initializeAccordionSections();
             updateKeywordNormalizationHint();
         });
 
@@ -600,6 +910,29 @@
 
         function uniqueList(values) {
             return Array.from(new Set(values.filter(Boolean)));
+        }
+
+        function buildOptionsHtml(options, includeBlank) {
+            let html = '';
+            if (includeBlank) {
+                html += '<option value="">-- Select --</option>';
+            }
+            options.forEach(function(option) {
+                html += '<option value="' + option.id + '">' + option.label + '</option>';
+            });
+            return html;
+        }
+
+        function populateTopLevelResourceTypes() {
+            const resourceTypeSelect = document.getElementById('resourceType');
+            resourceTypeSelect.innerHTML = buildOptionsHtml(INVENIO_RESOURCE_TYPES, false);
+            if (!resourceTypeSelect.value) {
+                resourceTypeSelect.value = 'dataset';
+            }
+        }
+
+        function relatedIdentifierResourceTypeOptionsHtml() {
+            return buildOptionsHtml(INVENIO_RESOURCE_TYPES, true);
         }
 
         function keywordIdentity(value) {
@@ -884,6 +1217,13 @@
             return uniqueList(selectedValues.concat(otherValues));
         }
 
+        function collectSingleValueWithOther(selectElement, otherInputElement) {
+            if (isOtherSelected(selectElement)) {
+                return otherInputElement.value.trim();
+            }
+            return (selectElement.value && selectElement.value !== '__other__') ? selectElement.value : '';
+        }
+
         function getModelPlaceholder(discipline, field) {
             if (discipline === 'fluid_dynamics') {
                 if (field === 'combustion') return 'e.g., swirl burner, bluff-body combustor';
@@ -952,7 +1292,7 @@
             });
 
             setSelectOptions(document.getElementById('regime'), fieldConfig.regimes, {
-                includeBlank: true,
+                includeBlank: false,
                 includeOther: true,
                 preserveSelection: true
             });
@@ -1035,6 +1375,209 @@
             });
         }
 
+        function contributorCardTemplate(cardId) {
+            return '' +
+                '<div class="card contributor-card" data-card-id="' + cardId + '">' +
+                '  <div class="card-header">' +
+                '    <h4 class="card-title contributor-title">Contributor</h4>' +
+                '    <button type="button" class="btn-small btn-danger remove-contributor">Remove</button>' +
+                '  </div>' +
+                '  <label class="required">First Name</label>' +
+                '  <input type="text" class="contributor-first-name" required>' +
+                '  <label class="required">Last Name</label>' +
+                '  <input type="text" class="contributor-last-name" required>' +
+                '  <label>Institution/Affiliation</label>' +
+                '  <input type="text" class="contributor-affiliation">' +
+                '  <label>Identifier Scheme (optional)</label>' +
+                '  <select class="contributor-identifier-scheme">' +
+                '    <option value="">-- Select --</option>' +
+                '    <option value="orcid">ORCID</option>' +
+                '    <option value="isni">ISNI</option>' +
+                '    <option value="gnd">GND</option>' +
+                '    <option value="ror">ROR</option>' +
+                '    <option value="scopusid">Scopus ID</option>' +
+                '  </select>' +
+                '  <label>Identifier (optional)</label>' +
+                '  <input type="text" class="contributor-identifier" placeholder="e.g., 0000-0002-1825-0097">' +
+                '  <label class="required">Contributor Role</label>' +
+                '  <select class="contributor-role" required>' +
+                '    <option value="">-- Select --</option>' +
+                '    <option value="contactperson">Contact Person</option>' +
+                '    <option value="datacollector">Data Collector</option>' +
+                '    <option value="datacurator">Data Curator</option>' +
+                '    <option value="datamanager">Data Manager</option>' +
+                '    <option value="distributor">Distributor</option>' +
+                '    <option value="editor">Editor</option>' +
+                '    <option value="hostinginstitution">Hosting Institution</option>' +
+                '    <option value="producer">Producer</option>' +
+                '    <option value="projectleader">Project Leader</option>' +
+                '    <option value="projectmanager">Project Manager</option>' +
+                '    <option value="projectmember">Project Member</option>' +
+                '    <option value="registrationagency">Registration Agency</option>' +
+                '    <option value="registrationauthority">Registration Authority</option>' +
+                '    <option value="relatedperson">Related Person</option>' +
+                '    <option value="researcher">Researcher</option>' +
+                '    <option value="researchgroup">Research Group</option>' +
+                '    <option value="rightsholder">Rights Holder</option>' +
+                '    <option value="sponsor">Sponsor</option>' +
+                '    <option value="supervisor">Supervisor</option>' +
+                '    <option value="workpackageleader">Work Package Leader</option>' +
+                '    <option value="other">Other</option>' +
+                '  </select>' +
+                '</div>';
+        }
+
+        function addContributor(initialData) {
+            contributorCounter += 1;
+            const contributorContainer = document.getElementById('contributorsContainer');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = contributorCardTemplate(contributorCounter);
+            const card = wrapper.firstChild;
+
+            if (initialData) {
+                card.querySelector('.contributor-first-name').value = initialData.given_name || '';
+                card.querySelector('.contributor-last-name').value = initialData.family_name || '';
+                card.querySelector('.contributor-affiliation').value = initialData.affiliation || '';
+                card.querySelector('.contributor-role').value = initialData.role || '';
+                card.querySelector('.contributor-identifier-scheme').value = initialData.identifier_scheme || '';
+                card.querySelector('.contributor-identifier').value = initialData.identifier || '';
+            }
+
+            card.querySelector('.remove-contributor').addEventListener('click', function() {
+                removeContributor(card);
+            });
+
+            contributorContainer.appendChild(card);
+            renumberContributorCards();
+        }
+
+        function removeContributor(card) {
+            card.remove();
+            renumberContributorCards();
+        }
+
+        function renumberContributorCards() {
+            const contributorCards = Array.from(document.querySelectorAll('.contributor-card'));
+            contributorCards.forEach(function(card, index) {
+                card.querySelector('.contributor-title').textContent = 'Contributor ' + (index + 1);
+            });
+        }
+
+        function relatedIdentifierCardTemplate(cardId) {
+            return '' +
+                '<div class="card related-identifier-card" data-card-id="' + cardId + '">' +
+                '  <div class="card-header">' +
+                '    <h4 class="card-title related-identifier-title">Related Identifier</h4>' +
+                '    <button type="button" class="btn-small btn-danger remove-related-identifier">Remove</button>' +
+                '  </div>' +
+                '  <label class="required">Identifier</label>' +
+                '  <input type="text" class="ri-identifier" required placeholder="e.g., 10.1234/example-doi or https://example.org/code">' +
+                '  <label>Identifier Scheme</label>' +
+                '  <select class="ri-scheme">' +
+                '    <option value="">-- Select --</option>' +
+                '    <option value="ark">ARK</option>' +
+                '    <option value="arxiv">arXiv</option>' +
+                '    <option value="bibcode">Bibcode</option>' +
+                '    <option value="crossreffunderid">Crossref Funder ID</option>' +
+                '    <option value="doi">DOI</option>' +
+                '    <option value="ean13">EAN13</option>' +
+                '    <option value="eissn">EISSN</option>' +
+                '    <option value="grid">GRID</option>' +
+                '    <option value="handle">Handle</option>' +
+                '    <option value="igsn">IGSN</option>' +
+                '    <option value="isbn">ISBN</option>' +
+                '    <option value="isni">ISNI</option>' +
+                '    <option value="issn">ISSN</option>' +
+                '    <option value="istc">ISTC</option>' +
+                '    <option value="lissn">LISSN</option>' +
+                '    <option value="lsid">LSID</option>' +
+                '    <option value="pmid">PMID</option>' +
+                '    <option value="purl">PURL</option>' +
+                '    <option value="upc">UPC</option>' +
+                '    <option value="url">URL</option>' +
+                '    <option value="urn">URN</option>' +
+                '    <option value="w3id">W3ID</option>' +
+                '    <option value="other">Other</option>' +
+                '  </select>' +
+                '  <label class="required">Relation Type</label>' +
+                '  <select class="ri-relation-type" required>' +
+                '    <option value="">-- Select --</option>' +
+                '    <option value="cites">Cites</option>' +
+                '    <option value="iscitedby">Is Cited By</option>' +
+                '    <option value="issupplementto">Is Supplement To</option>' +
+                '    <option value="issupplementedby">Is Supplemented By</option>' +
+                '    <option value="ispartof">Is Part Of</option>' +
+                '    <option value="haspart">Has Part</option>' +
+                '    <option value="isnewversionof">Is New Version Of</option>' +
+                '    <option value="ispreviousversionof">Is Previous Version Of</option>' +
+                '    <option value="isversionof">Is Version Of</option>' +
+                '    <option value="hasversion">Has Version</option>' +
+                '    <option value="iscontinuedby">Is Continued By</option>' +
+                '    <option value="continues">Continues</option>' +
+                '    <option value="ispublishedin">Is Published In</option>' +
+                '    <option value="issourceof">Is Source Of</option>' +
+                '    <option value="isderivedfrom">Is Derived From</option>' +
+                '    <option value="references">References</option>' +
+                '    <option value="isreferencedby">Is Referenced By</option>' +
+                '    <option value="documents">Documents</option>' +
+                '    <option value="isdocumentedby">Is Documented By</option>' +
+                '    <option value="describes">Describes</option>' +
+                '    <option value="isdescribedby">Is Described By</option>' +
+                '    <option value="isidenticalto">Is Identical To</option>' +
+                '    <option value="isvariantformof">Is Variant Form Of</option>' +
+                '    <option value="isoriginalformof">Is Original Form Of</option>' +
+                '    <option value="requires">Requires</option>' +
+                '    <option value="isrequiredby">Is Required By</option>' +
+                '    <option value="reviews">Reviews</option>' +
+                '    <option value="isreviewedby">Is Reviewed By</option>' +
+                '    <option value="compiles">Compiles</option>' +
+                '    <option value="iscompiledby">Is Compiled By</option>' +
+                '    <option value="hasmetadata">Has Metadata</option>' +
+                '    <option value="ismetadatafor">Is Metadata For</option>' +
+                '    <option value="obsoletes">Obsoletes</option>' +
+                '    <option value="isobsoletedby">Is Obsoleted By</option>' +
+                '  </select>' +
+                '  <label>Related Resource Type</label>' +
+                '  <select class="ri-resource-type">' +
+                     relatedIdentifierResourceTypeOptionsHtml() +
+                '  </select>' +
+                '  <label>Description (optional)</label>' +
+                '  <textarea class="ri-description" placeholder="Optional context for this relationship"></textarea>' +
+                '</div>';
+        }
+
+        function addRelatedIdentifier(initialData) {
+            relatedIdentifierCounter += 1;
+            const relatedContainer = document.getElementById('relatedIdentifiersContainer');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = relatedIdentifierCardTemplate(relatedIdentifierCounter);
+            const card = wrapper.firstChild;
+
+            card.querySelector('.remove-related-identifier').addEventListener('click', function() {
+                removeRelatedIdentifier(card);
+            });
+
+            if (initialData) {
+                card.querySelector('.ri-identifier').value = initialData.identifier || '';
+                card.querySelector('.ri-relation-type').value = initialData.relation_type || '';
+            }
+
+            relatedContainer.appendChild(card);
+            renumberRelatedIdentifierCards();
+        }
+
+        function removeRelatedIdentifier(card) {
+            card.remove();
+            renumberRelatedIdentifierCards();
+        }
+
+        function renumberRelatedIdentifierCards() {
+            const relatedCards = Array.from(document.querySelectorAll('.related-identifier-card'));
+            relatedCards.forEach(function(card, index) {
+                card.querySelector('.related-identifier-title').textContent = 'Related Identifier ' + (index + 1);
+            });
+        }
+
         function observationCardTemplate(cardId) {
             return '' +
                 '<div class="card observation-card" data-card-id="' + cardId + '">' +
@@ -1049,8 +1592,10 @@
                 '    <option value="experimental">Experimental</option>' +
                 '  </select>' +
                 '  <label class="required obs-facility-label">Code or Facility Name</label>' +
-                '  <input type="text" class="obs-facility" required placeholder="e.g., Nektar++, wind tunnel A">' +
+                '  <select class="obs-facility" required></select>' +
                 '  <div class="help-text obs-facility-help">Set by observation type.</div>' +
+                '  <label class="hidden obs-other-facility-label">Other Code/Facility Name</label>' +
+                '  <input type="text" class="hidden obs-other-facility" placeholder="e.g., custom in-house setup">' +
                 '  <label>Methods (select one or more)</label>' +
                 '  <select class="obs-methods" multiple size="8"></select>' +
                 '  <div class="help-text">Filtered by discipline, field, and observation type.</div>' +
@@ -1081,12 +1626,6 @@
                 '  <label>Variables in Files</label>' +
                 '  <div class="help-text">Format: variable_name | description | units (one per line)</div>' +
                 '  <textarea class="obs-variables-table" rows="6" placeholder="u | streamwise velocity | m/s\np | pressure | Pa"></textarea>' +
-                '  <label>Storage Format</label>' +
-                '  <select class="obs-storage-format">' +
-                '    <option value="">-- Select --</option>' +
-                '    <option value="binary">Binary</option>' +
-                '    <option value="ASCII">ASCII</option>' +
-                '  </select>' +
                 '  <label>File Description</label>' +
                 '  <textarea class="obs-file-description" placeholder="e.g., one file per timestep"></textarea>' +
                 '</div>';
@@ -1106,6 +1645,14 @@
 
             card.querySelector('.obs-type').addEventListener('change', function() {
                 refreshObservationCard(card);
+            });
+
+            card.querySelector('.obs-facility').addEventListener('change', function() {
+                toggleOtherInput(
+                    card.querySelector('.obs-facility'),
+                    card.querySelector('.obs-other-facility-label'),
+                    card.querySelector('.obs-other-facility')
+                );
             });
 
             card.querySelector('.obs-methods').addEventListener('change', function() {
@@ -1128,7 +1675,7 @@
 
             if (initialData) {
                 card.querySelector('.obs-type').value = initialData.observation_type || '';
-                card.querySelector('.obs-facility').value = initialData.facility || '';
+                card.dataset.initialFacility = initialData.facility || '';
             }
 
             refreshObservationCard(card);
@@ -1167,24 +1714,32 @@
             const fieldConfig = fieldContext.fieldConfig;
 
             const observationTypeElement = card.querySelector('.obs-type');
+            const facilityElement = card.querySelector('.obs-facility');
+            const otherFacilityLabel = card.querySelector('.obs-other-facility-label');
+            const otherFacilityInput = card.querySelector('.obs-other-facility');
             const methodsElement = card.querySelector('.obs-methods');
             const observedQuantitiesElement = card.querySelector('.obs-observed-quantities');
             const dataAcquisitionElement = card.querySelector('.obs-data-acquisition');
 
             const observationType = observationTypeElement.value;
             const observationConfig = OBSERVATION_CONFIG[discipline] && OBSERVATION_CONFIG[discipline][observationType];
+            const initialFacility = Object.prototype.hasOwnProperty.call(card.dataset, 'initialFacility')
+                ? card.dataset.initialFacility
+                : null;
 
             if (!observationConfig) {
+                setSelectOptions(facilityElement, [], { includeBlank: true, includeOther: false, preserveSelection: false });
                 setSelectOptions(methodsElement, [], { includeBlank: false, includeOther: true, preserveSelection: false });
                 setSelectOptions(observedQuantitiesElement, [], { includeBlank: false, includeOther: true, preserveSelection: false });
                 setSelectOptions(dataAcquisitionElement, [], { includeBlank: true, includeOther: false, preserveSelection: false });
 
                 card.querySelector('.obs-facility-label').textContent = 'Code or Facility Name';
                 card.querySelector('.obs-facility-help').textContent = 'Select observation type to constrain options.';
-                card.querySelector('.obs-facility').placeholder = 'e.g., Nektar++, wind tunnel, structures lab';
+                otherFacilityInput.placeholder = 'e.g., Nektar++, wind tunnel, structures lab';
                 card.querySelector('.obs-operating-conditions').placeholder = 'Parameter: value';
                 card.querySelector('.obs-operating-hint').textContent = 'Select observation type for suggested keys.';
 
+                toggleOtherInput(facilityElement, otherFacilityLabel, otherFacilityInput);
                 toggleOtherInput(methodsElement, card.querySelector('.obs-other-methods-label'), card.querySelector('.obs-other-methods'));
                 toggleOtherInput(observedQuantitiesElement, card.querySelector('.obs-other-observed-label'), card.querySelector('.obs-other-observed'));
                 return;
@@ -1193,7 +1748,9 @@
             const fieldMethods = (observationConfig.fieldMethods && observationConfig.fieldMethods[field]) || [];
             const methods = uniqueList(observationConfig.methods.concat(fieldMethods));
             const observedQuantities = uniqueList(fieldConfig.observedQuantities.concat(observationConfig.extraQuantities || []));
+            const facilityOptions = observationConfig.facilityOptions || [];
 
+            setSelectOptions(facilityElement, facilityOptions, { includeBlank: true, includeOther: true, preserveSelection: true });
             setSelectOptions(methodsElement, methods, { includeBlank: false, includeOther: true, preserveSelection: true });
             setSelectOptions(observedQuantitiesElement, observedQuantities, { includeBlank: false, includeOther: true, preserveSelection: true });
 
@@ -1209,13 +1766,27 @@
 
             card.querySelector('.obs-facility-label').textContent = observationConfig.facilityLabel;
             card.querySelector('.obs-facility-help').textContent = observationConfig.facilityHelp;
-            card.querySelector('.obs-facility').placeholder = observationConfig.facilityPlaceholder;
+            otherFacilityInput.placeholder = observationConfig.facilityPlaceholder;
             card.querySelector('.obs-operating-conditions').placeholder = observationConfig.operatingTemplate;
             card.querySelector('.obs-operating-hint').textContent =
                 'Suggested keys: ' + observationConfig.operatingTemplate.split('\n').map(function(line) {
                     return line.split(':')[0];
                 }).join(', ');
 
+            if (initialFacility !== null) {
+                const hasInitialOption = Array.from(facilityElement.options).some(function(option) {
+                    return option.value === initialFacility;
+                });
+                if (hasInitialOption) {
+                    facilityElement.value = initialFacility;
+                } else if (initialFacility) {
+                    facilityElement.value = '__other__';
+                    otherFacilityInput.value = initialFacility;
+                }
+                delete card.dataset.initialFacility;
+            }
+
+            toggleOtherInput(facilityElement, otherFacilityLabel, otherFacilityInput);
             toggleOtherInput(methodsElement, card.querySelector('.obs-other-methods-label'), card.querySelector('.obs-other-methods'));
             toggleOtherInput(observedQuantitiesElement, card.querySelector('.obs-other-observed-label'), card.querySelector('.obs-other-observed'));
         }
@@ -1339,11 +1910,69 @@
                 }
             });
 
+            const contributorCards = Array.from(document.querySelectorAll('.contributor-card'));
+            contributorCards.forEach(function(card, index) {
+                const firstNameInput = card.querySelector('.contributor-first-name');
+                const lastNameInput = card.querySelector('.contributor-last-name');
+                const roleInput = card.querySelector('.contributor-role');
+                const identifierSchemeInput = card.querySelector('.contributor-identifier-scheme');
+                const identifierInput = card.querySelector('.contributor-identifier');
+
+                if (!firstNameInput.value.trim()) {
+                    errors.push('Contributor ' + (index + 1) + ': first name is required.');
+                    firstNameInput.classList.add('invalid');
+                }
+
+                if (!lastNameInput.value.trim()) {
+                    errors.push('Contributor ' + (index + 1) + ': last name is required.');
+                    lastNameInput.classList.add('invalid');
+                }
+
+                if (!roleInput.value) {
+                    errors.push('Contributor ' + (index + 1) + ': role is required.');
+                    roleInput.classList.add('invalid');
+                }
+
+                if (identifierInput.value.trim() && !identifierSchemeInput.value) {
+                    errors.push('Contributor ' + (index + 1) + ': select Identifier Scheme when Identifier is set.');
+                    identifierSchemeInput.classList.add('invalid');
+                }
+
+                if (identifierSchemeInput.value && !identifierInput.value.trim()) {
+                    errors.push('Contributor ' + (index + 1) + ': provide Identifier value when Identifier Scheme is set.');
+                    identifierInput.classList.add('invalid');
+                }
+            });
+
             const keywords = normalizeKeywordList(parseCommaList(document.getElementById('keywords').value));
             if (keywords.length === 0) {
                 errors.push('Keywords: provide at least one keyword.');
                 document.getElementById('keywords').classList.add('invalid');
             }
+
+            const funderNameInput = document.getElementById('funderName');
+            const awardNumberInput = document.getElementById('awardNumber');
+            if (awardNumberInput.value.trim() && !funderNameInput.value.trim()) {
+                errors.push('Funding: provide Funder Name when Award/Grant Number is set.');
+                funderNameInput.classList.add('invalid');
+            }
+
+            const relatedCards = Array.from(document.querySelectorAll('.related-identifier-card'));
+            relatedCards.forEach(function(card, index) {
+                const identifierInput = card.querySelector('.ri-identifier');
+                const schemeInput = card.querySelector('.ri-scheme');
+                const relationTypeInput = card.querySelector('.ri-relation-type');
+
+                if (!identifierInput.value.trim()) {
+                    errors.push('Related Identifier ' + (index + 1) + ': identifier is required.');
+                    identifierInput.classList.add('invalid');
+                }
+
+                if (!relationTypeInput.value) {
+                    errors.push('Related Identifier ' + (index + 1) + ': relation type is required.');
+                    relationTypeInput.classList.add('invalid');
+                }
+            });
 
             const subfieldSelect = document.getElementById('subfield');
             const otherSubfieldInput = document.getElementById('otherSubfield');
@@ -1367,6 +1996,7 @@
             observationCards.forEach(function(card, index) {
                 const typeElement = card.querySelector('.obs-type');
                 const facilityElement = card.querySelector('.obs-facility');
+                const otherFacilityInput = card.querySelector('.obs-other-facility');
                 const methodsElement = card.querySelector('.obs-methods');
                 const otherMethodsInput = card.querySelector('.obs-other-methods');
                 const observedElement = card.querySelector('.obs-observed-quantities');
@@ -1381,6 +2011,11 @@
                 if (!facilityElement.value.trim()) {
                     errors.push('Observation ' + (index + 1) + ': facility/code name is required.');
                     facilityElement.classList.add('invalid');
+                }
+
+                if (isOtherSelected(facilityElement) && !otherFacilityInput.value.trim()) {
+                    errors.push('Observation ' + (index + 1) + ': provide a value for Other Code/Facility Name.');
+                    otherFacilityInput.classList.add('invalid');
                 }
 
                 if (isOtherSelected(methodsElement) && parseCommaList(otherMethodsInput.value).length === 0) {
@@ -1410,11 +2045,10 @@
                 const fileName = card.querySelector('.obs-file-name').value.trim();
                 const fileType = card.querySelector('.obs-file-type').value.trim();
                 const multipleFilesRule = card.querySelector('.obs-multiple-files-rule').value.trim();
-                const storageFormat = card.querySelector('.obs-storage-format').value;
                 const fileDescription = card.querySelector('.obs-file-description').value.trim();
                 const variablesRaw = card.querySelector('.obs-variables-table').value.trim();
 
-                const hasAnyFileField = Boolean(fileName || fileType || multipleFilesRule || storageFormat || fileDescription || variablesRaw);
+                const hasAnyFileField = Boolean(fileName || fileType || multipleFilesRule || fileDescription || variablesRaw);
                 if (hasAnyFileField) {
                     const parsedVariables = parseVariablesTable(variablesRaw);
 
@@ -1460,11 +2094,99 @@
             return creators;
         }
 
+        function collectContributors() {
+            const contributors = [];
+            Array.from(document.querySelectorAll('.contributor-card')).forEach(function(card) {
+                const givenName = card.querySelector('.contributor-first-name').value.trim();
+                const familyName = card.querySelector('.contributor-last-name').value.trim();
+                const affiliation = card.querySelector('.contributor-affiliation').value.trim();
+                const identifierScheme = card.querySelector('.contributor-identifier-scheme').value;
+                const identifier = card.querySelector('.contributor-identifier').value.trim();
+                const role = card.querySelector('.contributor-role').value;
+
+                if (!givenName || !familyName || !role) {
+                    return;
+                }
+
+                const contributor = {
+                    person_or_org: {
+                        type: 'personal',
+                        given_name: givenName,
+                        family_name: familyName
+                    },
+                    role: {
+                        id: role
+                    }
+                };
+
+                if (affiliation) {
+                    contributor.affiliations = [{ name: affiliation }];
+                }
+
+                if (identifierScheme && identifier) {
+                    contributor.person_or_org.identifiers = [
+                        {
+                            scheme: identifierScheme,
+                            identifier: identifier
+                        }
+                    ];
+                }
+
+                contributors.push(contributor);
+            });
+
+            return contributors;
+        }
+
+        function collectRelatedIdentifiers() {
+            const relatedIdentifiers = [];
+
+            Array.from(document.querySelectorAll('.related-identifier-card')).forEach(function(card) {
+                const identifier = card.querySelector('.ri-identifier').value.trim();
+                const schemeValue = card.querySelector('.ri-scheme').value;
+                const relationType = card.querySelector('.ri-relation-type').value;
+                const resourceTypeValue = card.querySelector('.ri-resource-type').value;
+                const description = card.querySelector('.ri-description').value.trim();
+
+                if (!identifier || !relationType) {
+                    return;
+                }
+
+                const relatedIdentifier = {
+                    identifier: identifier,
+                    relation_type: {
+                        id: relationType
+                    }
+                };
+
+                if (schemeValue) {
+                    relatedIdentifier.scheme = schemeValue;
+                }
+
+                if (resourceTypeValue) {
+                    relatedIdentifier.resource_type = {
+                        id: resourceTypeValue
+                    };
+                }
+
+                if (description) {
+                    relatedIdentifier.description = description;
+                }
+
+                relatedIdentifiers.push(relatedIdentifier);
+            });
+
+            return relatedIdentifiers;
+        }
+
         function collectObservations() {
             return Array.from(document.querySelectorAll('.observation-card')).map(function(card) {
                 const observation = {
                     observation_type: card.querySelector('.obs-type').value,
-                    facility: card.querySelector('.obs-facility').value.trim(),
+                    facility: collectSingleValueWithOther(
+                        card.querySelector('.obs-facility'),
+                        card.querySelector('.obs-other-facility')
+                    ),
                     observed_quantities: collectControlledValues(
                         card.querySelector('.obs-observed-quantities'),
                         card.querySelector('.obs-other-observed')
@@ -1505,11 +2227,10 @@
                 const fileName = card.querySelector('.obs-file-name').value.trim();
                 const fileType = card.querySelector('.obs-file-type').value.trim();
                 const multipleFilesRule = card.querySelector('.obs-multiple-files-rule').value.trim();
-                const storageFormat = card.querySelector('.obs-storage-format').value;
                 const fileDescription = card.querySelector('.obs-file-description').value.trim();
                 const variablesRaw = card.querySelector('.obs-variables-table').value.trim();
 
-                if (fileName || fileType || multipleFilesRule || storageFormat || fileDescription || variablesRaw) {
+                if (fileName || fileType || multipleFilesRule || fileDescription || variablesRaw) {
                     const fileMetadata = {};
 
                     if (fileName) fileMetadata.file_name = fileName;
@@ -1527,7 +2248,6 @@
                         fileMetadata.variable_units = parsedVariables.variableUnits;
                     }
 
-                    if (storageFormat) fileMetadata.storage_format = storageFormat;
                     if (fileDescription) fileMetadata.description = fileDescription;
 
                     if (Object.keys(fileMetadata).length) {
@@ -1541,8 +2261,10 @@
 
         function generateJSON() {
             const creators = collectCreators();
+            const contributors = collectContributors();
             const discipline = document.getElementById('discipline').value;
             const observations = collectObservations();
+            const relatedIdentifiers = collectRelatedIdentifiers();
             const keywords = normalizeKeywordList(parseCommaList(document.getElementById('keywords').value));
             document.getElementById('keywords').value = keywords.join(', ');
 
@@ -1550,7 +2272,7 @@
                 title: document.getElementById('title').value,
                 description: document.getElementById('description').value,
                 publication_date: document.getElementById('publicationDate').value,
-                resource_type: { id: 'dataset' },
+                resource_type: { id: document.getElementById('resourceType').value },
                 creators: creators,
                 domain: {
                     discipline: discipline,
@@ -1569,7 +2291,7 @@
 
             const regimes = collectControlledValues(document.getElementById('regime'), document.getElementById('otherRegime'));
             if (regimes.length) {
-                metadata.domain.study.regime = regimes[0];
+                metadata.domain.study.regime = regimes;
             }
 
             const model = document.getElementById('model').value.trim();
@@ -1577,9 +2299,40 @@
                 metadata.domain.study.model = model;
             }
 
+            const publisher = document.getElementById('publisher').value.trim();
+            if (publisher) {
+                metadata.publisher = publisher;
+            }
+
+            const version = document.getElementById('version').value.trim();
+            if (version) {
+                metadata.version = version;
+            }
+
+            if (contributors.length) {
+                metadata.contributors = contributors;
+            }
+
+            const funderName = document.getElementById('funderName').value.trim();
+            const awardNumber = document.getElementById('awardNumber').value.trim();
+            if (funderName || awardNumber) {
+                const fundingEntry = {};
+                if (funderName) {
+                    fundingEntry.funder = { name: funderName };
+                }
+                if (awardNumber) {
+                    fundingEntry.award = { number: awardNumber };
+                }
+                metadata.funding = [fundingEntry];
+            }
+
             const license = document.getElementById('license').value;
             if (license) {
                 metadata.rights = [{ id: license }];
+            }
+
+            if (relatedIdentifiers.length) {
+                metadata.related_identifiers = relatedIdentifiers;
             }
 
             const jsonString = JSON.stringify(metadata, null, 2);
@@ -1611,9 +2364,13 @@
                 document.getElementById('discipline').value = 'fluid_dynamics';
 
                 document.getElementById('creatorsContainer').innerHTML = '';
+                document.getElementById('contributorsContainer').innerHTML = '';
                 document.getElementById('observationsContainer').innerHTML = '';
+                document.getElementById('relatedIdentifiersContainer').innerHTML = '';
                 creatorCounter = 0;
+                contributorCounter = 0;
                 observationCounter = 0;
+                relatedIdentifierCounter = 0;
 
                 clearErrors();
                 document.getElementById('output').style.display = 'none';
@@ -1621,6 +2378,7 @@
                 addCreator();
                 addObservation();
                 refreshStudyControls();
+                expandAllAccordionSections();
             }
         }
 
