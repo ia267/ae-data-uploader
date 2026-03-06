@@ -5,50 +5,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AE Datastore Metadata Form</title>
     <style>
+        :root {
+            --page-bg: #e9ecef;
+            --panel-bg: #f7f8fa;
+            --card-bg: #ffffff;
+            --line: #d0d6de;
+            --text: #2d2d2d;
+            --muted: #6d7580;
+            --primary: #1678c2;
+            --primary-dark: #0f67ab;
+            --danger: #c0392b;
+            --danger-dark: #a63125;
+            --secondary: #97a1ad;
+            --secondary-dark: #7f8994;
+            --warning-bg: #f4efe3;
+            --warning-line: #cab88f;
+            --success-bg: #def2de;
+            --success-line: #8cc58c;
+        }
         body {
-            font-family: Arial, sans-serif;
-            max-width: 960px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1120px;
+            margin: 24px auto 56px;
+            padding: 0 18px;
+            background-color: var(--page-bg);
+            color: var(--text);
+        }
+        h1 {
+            margin: 0 0 8px;
+            color: #263238;
+            font-size: 30px;
+            font-weight: 650;
+        }
+        p {
+            margin: 0 0 8px;
+        }
+        #metadataForm {
+            margin-top: 18px;
         }
         .form-section {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: var(--panel-bg);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            margin-bottom: 16px;
+            padding: 0 16px 16px;
         }
-        h1 { color: #333; }
-        h2 { color: #666; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-        h3 { color: #555; margin-top: 16px; margin-bottom: 8px; }
-        h4 { color: #666; margin-top: 12px; margin-bottom: 6px; }
+        .form-section > h2,
+        #output > h2 {
+            margin: 0 -16px 14px;
+            background: var(--primary);
+            color: #fff;
+            padding: 12px 14px;
+            font-size: 27px;
+            font-weight: 500;
+            border-radius: 3px 3px 0 0;
+        }
+        .form-section > h2::after {
+            content: "▾";
+            float: right;
+            font-size: 14px;
+            opacity: 0.95;
+            margin-top: 4px;
+        }
+        .form-section > h2.accordion-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        .form-section > h2.accordion-header:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.9);
+            outline-offset: -2px;
+        }
+        .form-section.collapsed {
+            padding-bottom: 0;
+        }
+        .form-section.collapsed > h2 {
+            margin-bottom: 0;
+            border-radius: 3px;
+        }
+        .form-section.collapsed > h2::after {
+            content: "▸";
+        }
+        .form-section.collapsed > :not(h2) {
+            display: none;
+        }
+        h3 {
+            color: #354553;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        h4 {
+            color: #4f5f6f;
+            margin-top: 12px;
+            margin-bottom: 6px;
+            font-size: 18px;
+            font-weight: 600;
+        }
         label {
             display: block;
             margin-top: 12px;
-            font-weight: bold;
-            color: #555;
+            font-weight: 600;
+            color: #2f3b46;
         }
         input, textarea, select {
             width: 100%;
-            padding: 8px;
+            padding: 8px 10px;
             margin-top: 5px;
-            border: 1px solid #ddd;
+            border: 1px solid #c8cfd7;
             border-radius: 4px;
             box-sizing: border-box;
+            background: #fff;
+            color: #2a2f33;
+            font-size: 15px;
+        }
+        input, select {
+            min-height: 38px;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #5a9ed8;
+            box-shadow: 0 0 0 2px rgba(22, 120, 194, 0.15);
         }
         select[multiple] {
             min-height: 130px;
         }
         textarea {
             min-height: 60px;
-            font-family: monospace;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
         }
         .help-text {
-            font-size: 0.9em;
-            color: #666;
-            font-style: italic;
-            margin-top: 3px;
+            font-size: 0.89em;
+            color: var(--muted);
+            margin-top: 4px;
         }
         .keyword-input-wrapper {
             position: relative;
@@ -60,7 +149,7 @@
             right: 0;
             z-index: 1000;
             background: #fff;
-            border: 1px solid #d9d9d9;
+            border: 1px solid var(--line);
             border-radius: 4px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
             max-height: 180px;
@@ -89,45 +178,45 @@
         }
         .required::after {
             content: " *";
-            color: #c62828;
+            color: var(--danger);
         }
         .hidden {
             display: none;
         }
         .invalid {
-            border-color: #b00020 !important;
+            border-color: var(--danger) !important;
         }
         .error-box {
             display: none;
-            background: #fdecea;
-            color: #7f1d1d;
-            border: 1px solid #f5c2c7;
+            background: #fbe8e7;
+            color: #7a2017;
+            border: 1px solid #efc6c2;
             padding: 12px;
-            border-radius: 6px;
+            border-radius: 4px;
             margin-bottom: 16px;
         }
         .card-list {
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 10px;
             margin-top: 10px;
         }
         .card {
-            border: 1px solid #d9d9d9;
-            border-radius: 6px;
-            padding: 14px;
-            background: #fafafa;
+            border: 1px solid #d8dee6;
+            border-radius: 4px;
+            padding: 12px;
+            background: var(--card-bg);
         }
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 10px;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
         }
         .card-title {
             margin: 0;
-            color: #333;
+            color: #2f3b46;
         }
         .button-group {
             display: flex;
@@ -135,70 +224,112 @@
             flex-wrap: wrap;
             margin-top: 12px;
         }
+        .button-group.form-actions {
+            justify-content: flex-end;
+        }
         button {
-            background-color: #007bff;
+            background-color: var(--primary);
             color: white;
-            padding: 10px 18px;
-            border: none;
+            padding: 9px 16px;
+            border: 1px solid transparent;
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: var(--primary-dark);
         }
         .btn-secondary {
-            background-color: #6c757d;
+            background-color: var(--secondary);
         }
         .btn-secondary:hover {
-            background-color: #5a6268;
+            background-color: var(--secondary-dark);
         }
         .btn-danger {
-            background-color: #c62828;
+            background-color: var(--danger);
         }
         .btn-danger:hover {
-            background-color: #9f1f1f;
+            background-color: var(--danger-dark);
         }
         .btn-small {
             font-size: 12px;
             padding: 6px 10px;
         }
         .note {
-            background: #eef5ff;
-            color: #174a7a;
-            border: 1px solid #cfe2ff;
-            border-radius: 6px;
+            background: var(--warning-bg);
+            color: #705522;
+            border: 1px solid var(--warning-line);
+            border-radius: 4px;
             padding: 10px;
-            margin-top: 10px;
+            margin-top: 8px;
             font-size: 0.95em;
         }
+        .note::before {
+            content: "Warning: ";
+            font-weight: 700;
+        }
         #output {
-            background: #f8f9fa;
-            padding: 15px;
+            background: var(--panel-bg);
+            border: 1px solid var(--line);
             border-radius: 4px;
+            padding: 0 16px 16px;
             margin-top: 20px;
             display: none;
+        }
+        #output > h2 {
+            margin: 0 -16px 14px;
+        }
+        .output-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
         }
         pre {
             background: #fff;
             padding: 15px;
             border-radius: 4px;
             overflow-x: auto;
-            border: 1px solid #ddd;
+            border: 1px solid #d1d8e0;
         }
         .success {
-            background: #d4edda;
-            color: #155724;
+            background: var(--success-bg);
+            color: #1f5e1f;
+            border: 1px solid var(--success-line);
             padding: 15px;
             border-radius: 4px;
             margin-top: 10px;
+        }
+        @media (max-width: 760px) {
+            body {
+                margin: 14px auto 24px;
+                padding: 0 10px;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            .form-section > h2,
+            #output > h2 {
+                font-size: 20px;
+            }
+            .button-group {
+                flex-direction: column;
+            }
+            .button-group button {
+                width: 100%;
+            }
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
 <body>
     <h1>AE Datastore Metadata Form</h1>
     <p>Fill in this form to generate valid JSON metadata for InvenioRDM upload.</p>
-    <p style="margin-top: 10px; color: #666;">Supports fluid mechanics and structures datasets using study metadata plus one or more observations.</p>
+    <p class="help-text">Supports fluid mechanics and structures datasets using study metadata plus one or more observations.</p>
 
     <form id="metadataForm">
         <div id="validationErrors" class="error-box" aria-live="polite"></div>
@@ -338,17 +469,19 @@
             This form supports multiple creators and multiple observations for both fluid_dynamics and structures.
         </div>
 
-        <div class="button-group">
-            <button type="button" onclick="resetForm()">Reset Form</button>
+        <div class="button-group form-actions">
+            <button type="button" class="btn-secondary" onclick="resetForm()">Reset Form</button>
             <button type="submit">Download metadata.json</button>
         </div>
     </form>
 
     <div id="output">
         <h2>Generated JSON Metadata</h2>
-        <button onclick="copyToClipboard()" style="float: right;">Copy JSON</button>
+        <div class="output-actions">
+            <button type="button" onclick="copyToClipboard()">Copy JSON</button>
+        </div>
         <pre id="jsonOutput"></pre>
-        <button onclick="downloadJSON()">Download JSON File</button>
+        <button type="button" onclick="downloadJSON()">Download JSON File</button>
     </div>
 
     <script>
@@ -630,6 +763,54 @@
         let relatedIdentifierCounter = 0;
         let observationCounter = 0;
 
+        function getSectionHeader(section) {
+            const firstChild = section.firstElementChild;
+            if (firstChild && firstChild.tagName === 'H2') {
+                return firstChild;
+            }
+            return section.querySelector('h2');
+        }
+
+        function setSectionCollapsed(section, collapsed) {
+            const header = getSectionHeader(section);
+            section.classList.toggle('collapsed', collapsed);
+            if (header) {
+                header.setAttribute('aria-expanded', String(!collapsed));
+            }
+        }
+
+        function expandAllAccordionSections() {
+            Array.from(document.querySelectorAll('#metadataForm .form-section')).forEach(function(section) {
+                setSectionCollapsed(section, false);
+            });
+        }
+
+        function initializeAccordionSections() {
+            Array.from(document.querySelectorAll('#metadataForm .form-section')).forEach(function(section) {
+                const header = getSectionHeader(section);
+                if (!header) {
+                    return;
+                }
+
+                header.classList.add('accordion-header');
+                header.setAttribute('role', 'button');
+                header.setAttribute('tabindex', '0');
+                header.setAttribute('aria-expanded', 'true');
+
+                const toggleSection = function() {
+                    setSectionCollapsed(section, !section.classList.contains('collapsed'));
+                };
+
+                header.addEventListener('click', toggleSection);
+                header.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleSection();
+                    }
+                });
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('publicationDate').valueAsDate = new Date();
             populateTopLevelResourceTypes();
@@ -700,6 +881,7 @@
             document.getElementById('metadataForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 clearErrors();
+                expandAllAccordionSections();
 
                 if (!document.getElementById('metadataForm').checkValidity()) {
                     document.getElementById('metadataForm').reportValidity();
@@ -718,6 +900,7 @@
             addCreator();
             addObservation();
             refreshStudyControls();
+            initializeAccordionSections();
             updateKeywordNormalizationHint();
         });
 
@@ -2195,6 +2378,7 @@
                 addCreator();
                 addObservation();
                 refreshStudyControls();
+                expandAllAccordionSections();
             }
         }
 
