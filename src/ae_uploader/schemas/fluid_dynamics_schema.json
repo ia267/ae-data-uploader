@@ -100,6 +100,20 @@
               },
               "name": {
                 "type": "string"
+              },
+              "identifiers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "scheme": {
+                      "type": "string"
+                    },
+                    "identifier": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             }
           },
@@ -221,8 +235,19 @@
               "description": "Subfields of study"
             },
             "regime": {
-              "type": "string",
-              "description": "Flow regime (e.g., compressible, incompressible)"
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1
+                }
+              ],
+              "description": "Flow regime(s) (e.g., compressible, incompressible)"
             },
             "model": {
               "type": "string",

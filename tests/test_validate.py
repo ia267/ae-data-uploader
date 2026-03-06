@@ -31,6 +31,12 @@ def test_validate_metadata_accepts_contributors_and_related_identifiers(valid_me
                 "type": "personal",
                 "given_name": "Grace",
                 "family_name": "Hopper",
+                "identifiers": [
+                    {
+                        "scheme": "orcid",
+                        "identifier": "0000-0001-5000-0007",
+                    }
+                ],
             },
             "role": {"id": "datacurator"},
         }
@@ -43,6 +49,14 @@ def test_validate_metadata_accepts_contributors_and_related_identifiers(valid_me
             "resource_type": {"id": "publication"},
         }
     ]
+
+    is_valid, errors = validate_metadata(valid_metadata)
+    assert is_valid is True
+    assert errors == []
+
+
+def test_validate_metadata_accepts_multiple_regimes(valid_metadata: dict):
+    valid_metadata["domain"]["study"]["regime"] = ["compressible", "high_Re"]
 
     is_valid, errors = validate_metadata(valid_metadata)
     assert is_valid is True

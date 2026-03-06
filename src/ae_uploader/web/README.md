@@ -67,6 +67,7 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 - First Name
 - Last Name
 - Affiliation
+- Identifier scheme + identifier
 - Contributor role
 - Add multiple contributors with "+ Add Contributor" button
 
@@ -74,7 +75,7 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 - Discipline (fluid_dynamics, structures)
 - Field (jet, boundary_layer, wake, combustion, other)
 - Keywords (comma-separated)
-- Flow Regime (optional)
+- Flow Regime(s) (optional, multi-select)
 
 ### Observations
 - Observation Type (numerical, experimental)
@@ -85,7 +86,6 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
   - File name pattern
   - File type
   - Variables
-  - Storage format
 
 ### License (Optional)
 - Creative Commons licenses

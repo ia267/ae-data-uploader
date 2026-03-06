@@ -44,7 +44,7 @@ class StudyMetadataSchema(Schema):
         ])
     )  # MANDATORY: controlled vocabulary
     subfield = fields.List(fields.Str())
-    regime = fields.Str()
+    regime = fields.Raw()  # Accept string or list of strings
     model = fields.Str()  # Optional: not all studies have named models
     keywords = fields.List(fields.Str(), required=True)  # MANDATORY: minimum metadata for discovery
 
@@ -77,7 +77,7 @@ def to_invenio_custom_fields(data: dict, namespace: str = "domain") -> dict:
         ...     "study": {
         ...         "field": "jet",
         ...         "keywords": ["turbulence", "mixing"],
-        ...         "regime": "subsonic"
+        ...         "regime": ["subsonic", "transonic"]
         ...     }
         ... }
         >>> to_invenio_custom_fields(data)
@@ -87,7 +87,7 @@ def to_invenio_custom_fields(data: dict, namespace: str = "domain") -> dict:
                 "study": {
                     "field": "jet",
                     "keywords": ["turbulence", "mixing"],
-                    "regime": "subsonic"
+                    "regime": ["subsonic", "transonic"]
                 }
             }
         }

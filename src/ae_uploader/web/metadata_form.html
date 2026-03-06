@@ -264,11 +264,11 @@
                 <label for="otherSubfield" id="otherSubfieldLabel" class="hidden">Other Subfield (comma-separated)</label>
                 <input type="text" id="otherSubfield" class="hidden" placeholder="e.g., wall_transpiration, bonded_joint">
 
-                <label for="regime">Regime</label>
-                <select id="regime"></select>
-                <div class="help-text">Choose a regime suggested for the selected field.</div>
+                <label for="regime">Regime (select one or more)</label>
+                <select id="regime" multiple size="6"></select>
+                <div class="help-text">Choose one or more regimes suggested for the selected field. Use Ctrl/Cmd for multi-select.</div>
 
-                <label for="otherRegime" id="otherRegimeLabel" class="hidden">Other Regime</label>
+                <label for="otherRegime" id="otherRegimeLabel" class="hidden">Other Regime (comma-separated)</label>
                 <input type="text" id="otherRegime" class="hidden" placeholder="e.g., strongly coupled nonlinear">
 
                 <label for="model">Model</label>
@@ -1072,7 +1072,7 @@
             });
 
             setSelectOptions(document.getElementById('regime'), fieldConfig.regimes, {
-                includeBlank: true,
+                includeBlank: false,
                 includeOther: true,
                 preserveSelection: true
             });
@@ -1168,6 +1168,17 @@
                 '  <input type="text" class="contributor-last-name" required>' +
                 '  <label>Institution/Affiliation</label>' +
                 '  <input type="text" class="contributor-affiliation">' +
+                '  <label>Identifier Scheme (optional)</label>' +
+                '  <select class="contributor-identifier-scheme">' +
+                '    <option value="">-- Select --</option>' +
+                '    <option value="orcid">ORCID</option>' +
+                '    <option value="isni">ISNI</option>' +
+                '    <option value="gnd">GND</option>' +
+                '    <option value="ror">ROR</option>' +
+                '    <option value="scopusid">Scopus ID</option>' +
+                '  </select>' +
+                '  <label>Identifier (optional)</label>' +
+                '  <input type="text" class="contributor-identifier" placeholder="e.g., 0000-0002-1825-0097">' +
                 '  <label class="required">Contributor Role</label>' +
                 '  <select class="contributor-role" required>' +
                 '    <option value="">-- Select --</option>' +
@@ -1208,6 +1219,8 @@
                 card.querySelector('.contributor-last-name').value = initialData.family_name || '';
                 card.querySelector('.contributor-affiliation').value = initialData.affiliation || '';
                 card.querySelector('.contributor-role').value = initialData.role || '';
+                card.querySelector('.contributor-identifier-scheme').value = initialData.identifier_scheme || '';
+                card.querySelector('.contributor-identifier').value = initialData.identifier || '';
             }
 
             card.querySelector('.remove-contributor').addEventListener('click', function() {
@@ -1242,18 +1255,30 @@
                 '  <label>Identifier Scheme</label>' +
                 '  <select class="ri-scheme">' +
                 '    <option value="">-- Select --</option>' +
-                '    <option value="doi">DOI</option>' +
-                '    <option value="url">URL</option>' +
-                '    <option value="handle">Handle</option>' +
+                '    <option value="ark">ARK</option>' +
                 '    <option value="arxiv">arXiv</option>' +
-                '    <option value="pmid">PMID</option>' +
+                '    <option value="bibcode">Bibcode</option>' +
+                '    <option value="crossreffunderid">Crossref Funder ID</option>' +
+                '    <option value="doi">DOI</option>' +
+                '    <option value="ean13">EAN13</option>' +
+                '    <option value="eissn">EISSN</option>' +
+                '    <option value="grid">GRID</option>' +
+                '    <option value="handle">Handle</option>' +
+                '    <option value="igsn">IGSN</option>' +
                 '    <option value="isbn">ISBN</option>' +
+                '    <option value="isni">ISNI</option>' +
                 '    <option value="issn">ISSN</option>' +
+                '    <option value="istc">ISTC</option>' +
+                '    <option value="lissn">LISSN</option>' +
+                '    <option value="lsid">LSID</option>' +
+                '    <option value="pmid">PMID</option>' +
+                '    <option value="purl">PURL</option>' +
+                '    <option value="upc">UPC</option>' +
+                '    <option value="url">URL</option>' +
                 '    <option value="urn">URN</option>' +
-                '    <option value="__other__">Other</option>' +
+                '    <option value="w3id">W3ID</option>' +
+                '    <option value="other">Other</option>' +
                 '  </select>' +
-                '  <label class="hidden ri-other-scheme-label">Other Scheme</label>' +
-                '  <input type="text" class="hidden ri-other-scheme" placeholder="e.g., w3id">' +
                 '  <label class="required">Relation Type</label>' +
                 '  <select class="ri-relation-type" required>' +
                 '    <option value="">-- Select --</option>' +
@@ -1265,12 +1290,19 @@
                 '    <option value="haspart">Has Part</option>' +
                 '    <option value="isnewversionof">Is New Version Of</option>' +
                 '    <option value="ispreviousversionof">Is Previous Version Of</option>' +
+                '    <option value="isversionof">Is Version Of</option>' +
+                '    <option value="hasversion">Has Version</option>' +
+                '    <option value="iscontinuedby">Is Continued By</option>' +
+                '    <option value="continues">Continues</option>' +
+                '    <option value="ispublishedin">Is Published In</option>' +
                 '    <option value="issourceof">Is Source Of</option>' +
                 '    <option value="isderivedfrom">Is Derived From</option>' +
                 '    <option value="references">References</option>' +
                 '    <option value="isreferencedby">Is Referenced By</option>' +
                 '    <option value="documents">Documents</option>' +
                 '    <option value="isdocumentedby">Is Documented By</option>' +
+                '    <option value="describes">Describes</option>' +
+                '    <option value="isdescribedby">Is Described By</option>' +
                 '    <option value="isidenticalto">Is Identical To</option>' +
                 '    <option value="isvariantformof">Is Variant Form Of</option>' +
                 '    <option value="isoriginalformof">Is Original Form Of</option>' +
@@ -1305,25 +1337,12 @@
                 removeRelatedIdentifier(card);
             });
 
-            card.querySelector('.ri-scheme').addEventListener('change', function() {
-                toggleOtherInput(
-                    card.querySelector('.ri-scheme'),
-                    card.querySelector('.ri-other-scheme-label'),
-                    card.querySelector('.ri-other-scheme')
-                );
-            });
-
             if (initialData) {
                 card.querySelector('.ri-identifier').value = initialData.identifier || '';
                 card.querySelector('.ri-relation-type').value = initialData.relation_type || '';
             }
 
             relatedContainer.appendChild(card);
-            toggleOtherInput(
-                card.querySelector('.ri-scheme'),
-                card.querySelector('.ri-other-scheme-label'),
-                card.querySelector('.ri-other-scheme')
-            );
             renumberRelatedIdentifierCards();
         }
 
@@ -1385,12 +1404,6 @@
                 '  <label>Variables in Files</label>' +
                 '  <div class="help-text">Format: variable_name | description | units (one per line)</div>' +
                 '  <textarea class="obs-variables-table" rows="6" placeholder="u | streamwise velocity | m/s\np | pressure | Pa"></textarea>' +
-                '  <label>Storage Format</label>' +
-                '  <select class="obs-storage-format">' +
-                '    <option value="">-- Select --</option>' +
-                '    <option value="binary">Binary</option>' +
-                '    <option value="ASCII">ASCII</option>' +
-                '  </select>' +
                 '  <label>File Description</label>' +
                 '  <textarea class="obs-file-description" placeholder="e.g., one file per timestep"></textarea>' +
                 '</div>';
@@ -1648,6 +1661,8 @@
                 const firstNameInput = card.querySelector('.contributor-first-name');
                 const lastNameInput = card.querySelector('.contributor-last-name');
                 const roleInput = card.querySelector('.contributor-role');
+                const identifierSchemeInput = card.querySelector('.contributor-identifier-scheme');
+                const identifierInput = card.querySelector('.contributor-identifier');
 
                 if (!firstNameInput.value.trim()) {
                     errors.push('Contributor ' + (index + 1) + ': first name is required.');
@@ -1662,6 +1677,16 @@
                 if (!roleInput.value) {
                     errors.push('Contributor ' + (index + 1) + ': role is required.');
                     roleInput.classList.add('invalid');
+                }
+
+                if (identifierInput.value.trim() && !identifierSchemeInput.value) {
+                    errors.push('Contributor ' + (index + 1) + ': select Identifier Scheme when Identifier is set.');
+                    identifierSchemeInput.classList.add('invalid');
+                }
+
+                if (identifierSchemeInput.value && !identifierInput.value.trim()) {
+                    errors.push('Contributor ' + (index + 1) + ': provide Identifier value when Identifier Scheme is set.');
+                    identifierInput.classList.add('invalid');
                 }
             });
 
@@ -1682,7 +1707,6 @@
             relatedCards.forEach(function(card, index) {
                 const identifierInput = card.querySelector('.ri-identifier');
                 const schemeInput = card.querySelector('.ri-scheme');
-                const otherSchemeInput = card.querySelector('.ri-other-scheme');
                 const relationTypeInput = card.querySelector('.ri-relation-type');
 
                 if (!identifierInput.value.trim()) {
@@ -1693,11 +1717,6 @@
                 if (!relationTypeInput.value) {
                     errors.push('Related Identifier ' + (index + 1) + ': relation type is required.');
                     relationTypeInput.classList.add('invalid');
-                }
-
-                if (schemeInput.value === '__other__' && !otherSchemeInput.value.trim()) {
-                    errors.push('Related Identifier ' + (index + 1) + ': provide other scheme value.');
-                    otherSchemeInput.classList.add('invalid');
                 }
             });
 
@@ -1766,11 +1785,10 @@
                 const fileName = card.querySelector('.obs-file-name').value.trim();
                 const fileType = card.querySelector('.obs-file-type').value.trim();
                 const multipleFilesRule = card.querySelector('.obs-multiple-files-rule').value.trim();
-                const storageFormat = card.querySelector('.obs-storage-format').value;
                 const fileDescription = card.querySelector('.obs-file-description').value.trim();
                 const variablesRaw = card.querySelector('.obs-variables-table').value.trim();
 
-                const hasAnyFileField = Boolean(fileName || fileType || multipleFilesRule || storageFormat || fileDescription || variablesRaw);
+                const hasAnyFileField = Boolean(fileName || fileType || multipleFilesRule || fileDescription || variablesRaw);
                 if (hasAnyFileField) {
                     const parsedVariables = parseVariablesTable(variablesRaw);
 
@@ -1822,6 +1840,8 @@
                 const givenName = card.querySelector('.contributor-first-name').value.trim();
                 const familyName = card.querySelector('.contributor-last-name').value.trim();
                 const affiliation = card.querySelector('.contributor-affiliation').value.trim();
+                const identifierScheme = card.querySelector('.contributor-identifier-scheme').value;
+                const identifier = card.querySelector('.contributor-identifier').value.trim();
                 const role = card.querySelector('.contributor-role').value;
 
                 if (!givenName || !familyName || !role) {
@@ -1843,6 +1863,15 @@
                     contributor.affiliations = [{ name: affiliation }];
                 }
 
+                if (identifierScheme && identifier) {
+                    contributor.person_or_org.identifiers = [
+                        {
+                            scheme: identifierScheme,
+                            identifier: identifier
+                        }
+                    ];
+                }
+
                 contributors.push(contributor);
             });
 
@@ -1855,7 +1884,6 @@
             Array.from(document.querySelectorAll('.related-identifier-card')).forEach(function(card) {
                 const identifier = card.querySelector('.ri-identifier').value.trim();
                 const schemeValue = card.querySelector('.ri-scheme').value;
-                const otherScheme = card.querySelector('.ri-other-scheme').value.trim();
                 const relationType = card.querySelector('.ri-relation-type').value;
                 const resourceTypeValue = card.querySelector('.ri-resource-type').value;
                 const description = card.querySelector('.ri-description').value.trim();
@@ -1871,9 +1899,8 @@
                     }
                 };
 
-                const scheme = schemeValue === '__other__' ? otherScheme : schemeValue;
-                if (scheme) {
-                    relatedIdentifier.scheme = scheme;
+                if (schemeValue) {
+                    relatedIdentifier.scheme = schemeValue;
                 }
 
                 if (resourceTypeValue) {
@@ -1937,11 +1964,10 @@
                 const fileName = card.querySelector('.obs-file-name').value.trim();
                 const fileType = card.querySelector('.obs-file-type').value.trim();
                 const multipleFilesRule = card.querySelector('.obs-multiple-files-rule').value.trim();
-                const storageFormat = card.querySelector('.obs-storage-format').value;
                 const fileDescription = card.querySelector('.obs-file-description').value.trim();
                 const variablesRaw = card.querySelector('.obs-variables-table').value.trim();
 
-                if (fileName || fileType || multipleFilesRule || storageFormat || fileDescription || variablesRaw) {
+                if (fileName || fileType || multipleFilesRule || fileDescription || variablesRaw) {
                     const fileMetadata = {};
 
                     if (fileName) fileMetadata.file_name = fileName;
@@ -1959,7 +1985,6 @@
                         fileMetadata.variable_units = parsedVariables.variableUnits;
                     }
 
-                    if (storageFormat) fileMetadata.storage_format = storageFormat;
                     if (fileDescription) fileMetadata.description = fileDescription;
 
                     if (Object.keys(fileMetadata).length) {
@@ -2003,7 +2028,7 @@
 
             const regimes = collectControlledValues(document.getElementById('regime'), document.getElementById('otherRegime'));
             if (regimes.length) {
-                metadata.domain.study.regime = regimes[0];
+                metadata.domain.study.regime = regimes;
             }
 
             const model = document.getElementById('model').value.trim();
