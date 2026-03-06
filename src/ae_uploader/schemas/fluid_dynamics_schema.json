@@ -94,6 +94,14 @@
         }
       }
     },
+    "publisher": {
+      "type": "string",
+      "description": "Publisher name (e.g., institution or repository owner)"
+    },
+    "version": {
+      "type": "string",
+      "description": "Dataset version string"
+    },
     "domain": {
       "type": "object",
       "required": ["discipline"],

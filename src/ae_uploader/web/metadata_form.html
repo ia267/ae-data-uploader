@@ -216,6 +216,13 @@
 
             <label for="publicationDate" class="required">Publication Date</label>
             <input type="date" id="publicationDate" required>
+            <div class="help-text">Use the date you want shown as the dataset publication date.</div>
+
+            <label for="publisher">Publisher (optional)</label>
+            <input type="text" id="publisher" placeholder="e.g., Imperial College London">
+
+            <label for="version">Version (optional)</label>
+            <input type="text" id="version" placeholder="e.g., v1.0, 2026.03">
 
             <h3>Creators</h3>
             <div id="creatorsContainer" class="card-list"></div>
@@ -280,6 +287,17 @@
             <div class="button-group">
                 <button type="button" id="addObservationBtn" class="btn-secondary">Add Observation</button>
             </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Funding (Optional)</h2>
+
+            <label for="funderName">Funder Name</label>
+            <input type="text" id="funderName" placeholder="e.g., UKRI EPSRC">
+
+            <label for="awardNumber">Award/Grant Number</label>
+            <input type="text" id="awardNumber" placeholder="e.g., EP/X012345/1">
+            <div class="help-text">If provided, funding information is added to Invenio metadata.</div>
         </div>
 
         <div class="form-section">
@@ -1345,6 +1363,13 @@
                 document.getElementById('keywords').classList.add('invalid');
             }
 
+            const funderNameInput = document.getElementById('funderName');
+            const awardNumberInput = document.getElementById('awardNumber');
+            if (awardNumberInput.value.trim() && !funderNameInput.value.trim()) {
+                errors.push('Funding: provide Funder Name when Award/Grant Number is set.');
+                funderNameInput.classList.add('invalid');
+            }
+
             const subfieldSelect = document.getElementById('subfield');
             const otherSubfieldInput = document.getElementById('otherSubfield');
             if (isOtherSelected(subfieldSelect) && parseCommaList(otherSubfieldInput.value).length === 0) {
@@ -1575,6 +1600,29 @@
             const model = document.getElementById('model').value.trim();
             if (model) {
                 metadata.domain.study.model = model;
+            }
+
+            const publisher = document.getElementById('publisher').value.trim();
+            if (publisher) {
+                metadata.publisher = publisher;
+            }
+
+            const version = document.getElementById('version').value.trim();
+            if (version) {
+                metadata.version = version;
+            }
+
+            const funderName = document.getElementById('funderName').value.trim();
+            const awardNumber = document.getElementById('awardNumber').value.trim();
+            if (funderName || awardNumber) {
+                const fundingEntry = {};
+                if (funderName) {
+                    fundingEntry.funder = { name: funderName };
+                }
+                if (awardNumber) {
+                    fundingEntry.award = { number: awardNumber };
+                }
+                metadata.funding = [fundingEntry];
             }
 
             const license = document.getElementById('license').value;
