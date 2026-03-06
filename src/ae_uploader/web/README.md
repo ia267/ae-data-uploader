@@ -53,7 +53,7 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 - Publication Date
 - Publisher (optional)
 - Version (optional)
-- Resource Type (dataset, publication, software, other)
+- Resource Type (dataset, publication, software)
 
 ### Creators
 - First Name

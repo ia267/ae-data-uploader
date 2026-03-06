@@ -224,6 +224,13 @@
             <label for="version">Version (optional)</label>
             <input type="text" id="version" placeholder="e.g., v1.0, 2026.03">
 
+            <label for="resourceType" class="required">Resource Type</label>
+            <select id="resourceType" required>
+                <option value="dataset" selected>Dataset</option>
+                <option value="software">Software</option>
+                <option value="publication">Publication</option>
+            </select>
+
             <h3>Creators</h3>
             <div id="creatorsContainer" class="card-list"></div>
             <div class="button-group">
@@ -1575,7 +1582,7 @@
                 title: document.getElementById('title').value,
                 description: document.getElementById('description').value,
                 publication_date: document.getElementById('publicationDate').value,
-                resource_type: { id: 'dataset' },
+                resource_type: { id: document.getElementById('resourceType').value },
                 creators: creators,
                 domain: {
                     discipline: discipline,
