@@ -919,17 +919,19 @@
                 return null;
             }
 
+            // If endpoint is Invenio records search, request keyword facet buckets
+            // from indexed custom field values across existing records.
+            if (isRecordsSearchEndpoint(requestUrl.toString())) {
+                requestUrl.searchParams.set('q', fragment);
+                requestUrl.searchParams.set('facets', KEYWORD_RECORDS_FACET_NAME);
+                requestUrl.searchParams.set('size', '0');
+                return requestUrl.toString();
+            }
+
             requestUrl.searchParams.set('q', fragment);
             requestUrl.searchParams.set('discipline', discipline);
             requestUrl.searchParams.set('field', field);
             requestUrl.searchParams.set('size', String(KEYWORD_MAX_SUGGESTIONS));
-
-            // If endpoint is Invenio records search, request keyword facet buckets
-            // from indexed custom field values across existing records.
-            if (isRecordsSearchEndpoint(requestUrl.toString())) {
-                requestUrl.searchParams.set('facets', KEYWORD_RECORDS_FACET_NAME);
-                requestUrl.searchParams.set('size', '0');
-            }
             return requestUrl.toString();
         }
 
