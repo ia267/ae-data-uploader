@@ -50,10 +50,6 @@
             font-style: italic;
             margin-top: 3px;
         }
-        .help-text.error {
-            color: #b00020;
-            font-style: normal;
-        }
         .keyword-input-wrapper {
             position: relative;
         }
@@ -268,10 +264,6 @@
                 </div>
                 <div class="help-text" id="keywordSuggestions">Suggested keywords are updated from the selected field.</div>
                 <div class="help-text" id="keywordNormalizationHint"></div>
-                <label for="keywordApiUrl">Keyword API URL (optional)</label>
-                <input type="url" id="keywordApiUrl" placeholder="e.g., https://data-dev.ae.ic.ac.uk/api/records">
-                <div class="help-text">Recommended: Invenio records endpoint (e.g., /api/records) to suggest keywords from existing records. Local suggestions are always available.</div>
-                <div class="help-text" id="keywordApiStatus"></div>
             </div>
 
             <div id="structuresSection" class="hidden">
@@ -515,16 +507,10 @@
         }
 
         const KEYWORD_CATALOG = buildKeywordCatalog();
-        const KEYWORD_API_STORAGE_KEY = 'ae_datastore_keyword_api_url';
-        const KEYWORD_API_DEBOUNCE_MS = 300;
         const KEYWORD_MAX_SUGGESTIONS = 8;
-        const KEYWORD_RECORDS_FACET_NAME = 'keywords';
 
         let creatorCounter = 0;
         let observationCounter = 0;
-        let keywordAutocompleteRequestId = 0;
-        let keywordApiAbortController = null;
-        let keywordApiDebounceTimer = null;
 
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('publicationDate').valueAsDate = new Date();
@@ -533,13 +519,6 @@
             document.getElementById('field').addEventListener('change', refreshStudyControls);
 
             const keywordsInput = document.getElementById('keywords');
-            const keywordApiInput = document.getElementById('keywordApiUrl');
-
-            try {
-                keywordApiInput.value = window.localStorage.getItem(KEYWORD_API_STORAGE_KEY) || '';
-            } catch (error) {
-                // localStorage may be disabled; ignore and continue.
-            }
 
             keywordsInput.addEventListener('input', function() {
                 refreshKeywordAutocomplete();
@@ -566,12 +545,6 @@
                     hideKeywordAutocomplete();
                 }
             });
-
-            keywordApiInput.addEventListener('input', function() {
-                persistKeywordApiUrl();
-                refreshKeywordAutocomplete();
-            });
-            keywordApiInput.addEventListener('change', persistKeywordApiUrl);
 
             document.getElementById('subfield').addEventListener('change', function() {
                 toggleOtherInput(
@@ -680,39 +653,6 @@
             return normalized;
         }
 
-        function persistKeywordApiUrl() {
-            const endpoint = getConfiguredKeywordApiUrl();
-            try {
-                if (endpoint) {
-                    window.localStorage.setItem(KEYWORD_API_STORAGE_KEY, endpoint);
-                } else {
-                    window.localStorage.removeItem(KEYWORD_API_STORAGE_KEY);
-                }
-            } catch (error) {
-                // localStorage may be disabled; ignore and continue.
-            }
-        }
-
-        function getConfiguredKeywordApiUrl() {
-            const input = document.getElementById('keywordApiUrl');
-            return input ? input.value.trim() : '';
-        }
-
-        function setKeywordApiStatus(message, isError) {
-            const status = document.getElementById('keywordApiStatus');
-            status.textContent = message || '';
-            status.classList.toggle('error', Boolean(isError));
-        }
-
-        function isRecordsSearchEndpoint(urlString) {
-            try {
-                const url = new URL(urlString);
-                return /\/api\/records\/?$/.test(url.pathname);
-            } catch (error) {
-                return false;
-            }
-        }
-
         function getKeywordSuggestionPool() {
             const fieldKeywords = getCurrentFieldContext().fieldConfig.keywords || [];
             return uniqueList(fieldKeywords.concat(KEYWORD_CATALOG));
@@ -780,22 +720,6 @@
             return sortKeywordSuggestions(filtered, context.fragmentKey).slice(0, KEYWORD_MAX_SUGGESTIONS);
         }
 
-        function mergeKeywordSuggestions(primary, secondary) {
-            const merged = [];
-            const seen = new Set();
-
-            primary.concat(secondary).forEach(function(keyword) {
-                const key = keywordIdentity(keyword);
-                if (seen.has(key)) {
-                    return;
-                }
-                seen.add(key);
-                merged.push(keyword);
-            });
-
-            return merged.slice(0, KEYWORD_MAX_SUGGESTIONS);
-        }
-
         function renderKeywordAutocomplete(suggestions) {
             const autocomplete = document.getElementById('keywordAutocomplete');
             if (suggestions.length === 0) {
@@ -825,153 +749,6 @@
             autocomplete.innerHTML = '';
         }
 
-        function extractKeywordCandidatesFromObject(node, accumulator) {
-            if (!node || typeof node !== 'object') {
-                return;
-            }
-
-            const pushIfString = function(value) {
-                if (typeof value === 'string' && value.trim()) {
-                    accumulator.push(value.trim());
-                }
-            };
-
-            ['keyword', 'term', 'value', 'key', 'name', 'subject', 'label'].forEach(function(field) {
-                pushIfString(node[field]);
-            });
-
-            if (typeof node.title === 'string') {
-                pushIfString(node.title);
-            } else if (node.title && typeof node.title === 'object') {
-                Object.keys(node.title).forEach(function(language) {
-                    pushIfString(node.title[language]);
-                });
-            }
-
-            if (node.metadata && typeof node.metadata === 'object') {
-                pushIfString(node.metadata.keyword);
-                if (Array.isArray(node.metadata.keywords)) {
-                    node.metadata.keywords.forEach(pushIfString);
-                }
-            }
-        }
-
-        function collectKeywordCandidatesFromApiResponse(payload) {
-            // Fast path for Invenio record-search facet responses.
-            if (
-                payload &&
-                payload.aggregations &&
-                payload.aggregations[KEYWORD_RECORDS_FACET_NAME] &&
-                Array.isArray(payload.aggregations[KEYWORD_RECORDS_FACET_NAME].buckets)
-            ) {
-                return normalizeKeywordList(
-                    payload.aggregations[KEYWORD_RECORDS_FACET_NAME].buckets
-                        .map(function(bucket) { return bucket && typeof bucket.key === 'string' ? bucket.key : ''; })
-                        .filter(Boolean)
-                );
-            }
-
-            const candidates = [];
-            const visited = new Set();
-
-            function visit(node) {
-                if (typeof node === 'string' && node.trim()) {
-                    candidates.push(node.trim());
-                    return;
-                }
-
-                if (!node || typeof node !== 'object') {
-                    return;
-                }
-                if (visited.has(node)) {
-                    return;
-                }
-                visited.add(node);
-
-                if (Array.isArray(node)) {
-                    node.forEach(visit);
-                    return;
-                }
-
-                extractKeywordCandidatesFromObject(node, candidates);
-                Object.keys(node).forEach(function(key) {
-                    if (node[key] && typeof node[key] === 'object') {
-                        visit(node[key]);
-                    }
-                });
-            }
-
-            visit(payload);
-            return normalizeKeywordList(uniqueList(candidates));
-        }
-
-        function buildKeywordApiRequestUrl(endpoint, fragment, discipline, field) {
-            let requestUrl;
-            try {
-                if (/^https?:\/\//i.test(endpoint)) {
-                    requestUrl = new URL(endpoint);
-                } else if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-                    requestUrl = new URL(endpoint, window.location.origin);
-                } else {
-                    return null;
-                }
-            } catch (error) {
-                return null;
-            }
-
-            // If endpoint is Invenio records search, request keyword facet buckets
-            // from indexed custom field values across existing records.
-            if (isRecordsSearchEndpoint(requestUrl.toString())) {
-                requestUrl.searchParams.set('q', fragment);
-                requestUrl.searchParams.set('facets', KEYWORD_RECORDS_FACET_NAME);
-                requestUrl.searchParams.set('size', '0');
-                return requestUrl.toString();
-            }
-
-            requestUrl.searchParams.set('q', fragment);
-            requestUrl.searchParams.set('discipline', discipline);
-            requestUrl.searchParams.set('field', field);
-            requestUrl.searchParams.set('size', String(KEYWORD_MAX_SUGGESTIONS));
-            return requestUrl.toString();
-        }
-
-        async function fetchKeywordSuggestionsFromApi(fragment, discipline, field) {
-            const endpoint = getConfiguredKeywordApiUrl();
-            if (!endpoint) {
-                return [];
-            }
-
-            const requestUrl = buildKeywordApiRequestUrl(endpoint, fragment, discipline, field);
-            if (!requestUrl) {
-                throw new Error('invalid_keyword_api_url');
-            }
-
-            if (keywordApiAbortController) {
-                keywordApiAbortController.abort();
-            }
-
-            keywordApiAbortController = new AbortController();
-
-            const response = await fetch(requestUrl, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                },
-                signal: keywordApiAbortController.signal
-            });
-
-            if (!response.ok) {
-                const responseText = await response.text();
-                throw new Error(
-                    'keyword_api_http_' + response.status + '_' + (responseText || '').slice(0, 180)
-                );
-            }
-
-            const payload = await response.json();
-            const candidates = collectKeywordCandidatesFromApiResponse(payload);
-            return normalizeKeywordList(candidates);
-        }
-
         function applyKeywordSuggestion(keyword) {
             const input = document.getElementById('keywords');
             const currentValues = parseCommaList(input.value);
@@ -994,86 +771,14 @@
 
         function refreshKeywordAutocomplete() {
             const context = buildKeywordAutocompleteContext();
-            const requestId = ++keywordAutocompleteRequestId;
 
             if (!context.hasActiveFragment && !context.inputIsFocused) {
                 hideKeywordAutocomplete();
-                setKeywordApiStatus('', false);
                 return;
             }
 
             const localSuggestions = buildLocalKeywordSuggestions(context);
             renderKeywordAutocomplete(localSuggestions);
-
-            if (keywordApiDebounceTimer) {
-                window.clearTimeout(keywordApiDebounceTimer);
-                keywordApiDebounceTimer = null;
-            }
-
-            const endpoint = getConfiguredKeywordApiUrl();
-            if (!endpoint || !context.hasActiveFragment) {
-                if (keywordApiAbortController) {
-                    keywordApiAbortController.abort();
-                    keywordApiAbortController = null;
-                }
-                setKeywordApiStatus('', false);
-                return;
-            }
-
-            keywordApiDebounceTimer = window.setTimeout(async function() {
-                let remoteCandidates;
-                try {
-                    const fieldContext = getCurrentFieldContext();
-                    remoteCandidates = await fetchKeywordSuggestionsFromApi(
-                        context.fragment,
-                        fieldContext.discipline,
-                        fieldContext.field
-                    );
-                } catch (error) {
-                    if (requestId !== keywordAutocompleteRequestId || error.name === 'AbortError') {
-                        return;
-                    }
-                    if (error.message === 'invalid_keyword_api_url') {
-                        setKeywordApiStatus('Keyword API URL is invalid for this page context; use a full https:// URL.', true);
-                    } else if (error.name === 'TypeError') {
-                        setKeywordApiStatus(
-                            'Keyword API blocked or unreachable (likely CORS/network). Open DevTools Console/Network for details.',
-                            true
-                        );
-                    } else if (error.message.indexOf('keyword_api_http_') === 0) {
-                        const prefix = 'keyword_api_http_';
-                        const statusPart = error.message.substring(prefix.length).split('_')[0];
-                        setKeywordApiStatus(
-                            'Keyword API returned HTTP ' + statusPart + ' (check endpoint/facet config).',
-                            true
-                        );
-                    } else {
-                        setKeywordApiStatus('Keyword API unavailable; using local suggestions.', true);
-                    }
-                    console.warn('Keyword API autocomplete error:', error);
-                    return;
-                }
-
-                if (requestId !== keywordAutocompleteRequestId) {
-                    return;
-                }
-
-                const latestContext = buildKeywordAutocompleteContext();
-                const local = buildLocalKeywordSuggestions(latestContext);
-                const remoteFiltered = sortKeywordSuggestions(
-                    filterKeywordSuggestions(remoteCandidates, latestContext.fragmentKey, latestContext.selectedKeys),
-                    latestContext.fragmentKey
-                );
-
-                const merged = mergeKeywordSuggestions(remoteFiltered, local);
-                renderKeywordAutocomplete(merged);
-
-                if (remoteFiltered.length > 0) {
-                    setKeywordApiStatus('Including suggestions from configured API endpoint.', false);
-                } else {
-                    setKeywordApiStatus('No API matches for current input; showing local suggestions.', false);
-                }
-            }, KEYWORD_API_DEBOUNCE_MS);
         }
 
         function updateKeywordNormalizationHint() {
