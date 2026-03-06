@@ -78,6 +78,54 @@
         }
       }
     },
+    "contributors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["person_or_org", "role"],
+        "properties": {
+          "person_or_org": {
+            "type": "object",
+            "required": ["type", "family_name"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["personal", "organizational"]
+              },
+              "given_name": {
+                "type": "string"
+              },
+              "family_name": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "affiliations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "role": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "publication_date": {
       "type": "string",
       "format": "date",
@@ -89,8 +137,54 @@
       "properties": {
         "id": {
           "type": "string",
-          "enum": ["dataset", "software", "publication"],
-          "description": "Type of resource"
+          "enum": [
+            "audio",
+            "dataset",
+            "event",
+            "image",
+            "image-diagram",
+            "image-drawing",
+            "image-figure",
+            "image-other",
+            "image-photo",
+            "image-plot",
+            "lesson",
+            "model",
+            "other",
+            "physicalobject",
+            "poster",
+            "presentation",
+            "publication",
+            "publication-annotationcollection",
+            "publication-book",
+            "publication-bookchapter",
+            "publication-conferencepaper",
+            "publication-conferenceproceeding",
+            "publication-datapaper",
+            "publication-dissertation",
+            "publication-journal",
+            "publication-journalarticle",
+            "publication-other",
+            "publication-outputmanagementplan",
+            "publication-patent",
+            "publication-peerreview",
+            "publication-preprint",
+            "publication-projectdeliverable",
+            "publication-projectmilestone",
+            "publication-proposal",
+            "publication-report",
+            "publication-softwaredocumentation",
+            "publication-standard",
+            "publication-taxonomictreatment",
+            "publication-technicalnote",
+            "publication-thesis",
+            "publication-workingpaper",
+            "software",
+            "software-computationalnotebook",
+            "video",
+            "workflow"
+          ],
+          "description": "Invenio resource type identifier"
         }
       }
     },
@@ -332,6 +426,45 @@
                 "type": "string"
               }
             }
+          }
+        }
+      }
+    },
+    "related_identifiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["identifier", "relation_type"],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scheme": {
+            "type": "string"
+          },
+          "relation_type": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "resource_type": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "description": {
+            "type": "string"
           }
         }
       }

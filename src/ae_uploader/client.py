@@ -243,7 +243,7 @@ class InvenioClient:
             invenio_metadata["metadata"]["rights"] = metadata["rights"]
 
         # Add selected generic Invenio metadata fields if present
-        for field_name in ("publisher", "version"):
+        for field_name in ("publisher", "version", "contributors", "related_identifiers"):
             if field_name in metadata:
                 invenio_metadata["metadata"][field_name] = metadata[field_name]
 

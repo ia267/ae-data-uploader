@@ -13,9 +13,10 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 1. **Fill Form**: Open the HTML form and fill in your dataset details
    - Core metadata (title, description, date)
    - Creators (add multiple with + button)
+   - Contributors (optional)
    - Domain information (discipline, field, keywords)
    - Observations (numerical or experimental)
-   - Optional: License information
+   - Optional: Related identifiers, funding, and license
 
 2. **Download JSON**: Click "Download metadata.json"
    - Browser will download the generated file
@@ -35,11 +36,12 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 ## Features
 
 - **Dynamic Fields**: Add multiple creators and observations
+- **Contributor Support**: Add contributor roles separate from creators
 - **Smart Validation**: Required fields marked with asterisk (*)
 - **Dropdown Menus**: Pre-populated with valid values from schema
 - **Keyword Autocomplete**: Suggests canonical keywords as users type
 - **Keyword Normalisation**: Deduplicates common variants (e.g., `high-Re` vs `high Re`)
-- **Single-Place Entry**: Includes key generic Invenio fields (publisher, version, funding)
+- **Single-Place Entry**: Includes key generic Invenio fields (publisher, version, contributors, related identifiers, funding)
 - **Conditional Sections**: File information appears for both numerical and experimental
 - **Real-time Preview**: Form validates as you type
 - **Mobile Responsive**: Works on phones and tablets
@@ -53,13 +55,20 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 - Publication Date
 - Publisher (optional)
 - Version (optional)
-- Resource Type (dataset, publication, software)
+- Resource Type (Invenio-aligned list, including dataset/publication/software and subtypes)
 
 ### Creators
 - First Name
 - Last Name
 - Affiliation (optional)
 - Add multiple creators with "+ Add Creator" button
+
+### Contributors (Optional)
+- First Name
+- Last Name
+- Affiliation
+- Contributor role
+- Add multiple contributors with "+ Add Contributor" button
 
 ### Domain Information
 - Discipline (fluid_dynamics, structures)
@@ -86,6 +95,13 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 ### Funding (Optional)
 - Funder name
 - Award/grant number
+
+### Related Identifiers (Optional)
+- Identifier (e.g., DOI/URL)
+- Scheme
+- Relation type
+- Related resource type
+- Description
 
 ## Tips
 

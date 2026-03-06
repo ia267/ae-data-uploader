@@ -225,16 +225,20 @@
             <input type="text" id="version" placeholder="e.g., v1.0, 2026.03">
 
             <label for="resourceType" class="required">Resource Type</label>
-            <select id="resourceType" required>
-                <option value="dataset" selected>Dataset</option>
-                <option value="software">Software</option>
-                <option value="publication">Publication</option>
-            </select>
+            <select id="resourceType" required></select>
+            <div class="help-text">Uses the same vocabulary style as Invenio resource types.</div>
 
             <h3>Creators</h3>
             <div id="creatorsContainer" class="card-list"></div>
             <div class="button-group">
                 <button type="button" id="addCreatorBtn" class="btn-secondary">Add Creator</button>
+            </div>
+
+            <h3>Contributors (Optional)</h3>
+            <div class="help-text">Use this for people who contributed but are not primary creators (e.g., data curator, supervisor).</div>
+            <div id="contributorsContainer" class="card-list"></div>
+            <div class="button-group">
+                <button type="button" id="addContributorBtn" class="btn-secondary">Add Contributor</button>
             </div>
         </div>
 
@@ -305,6 +309,16 @@
             <label for="awardNumber">Award/Grant Number</label>
             <input type="text" id="awardNumber" placeholder="e.g., EP/X012345/1">
             <div class="help-text">If provided, funding information is added to Invenio metadata.</div>
+        </div>
+
+        <div class="form-section">
+            <h2>Related Identifiers (Optional)</h2>
+            <div class="help-text">Link this record to related datasets, software, publications, reports, or other outputs.</div>
+
+            <div id="relatedIdentifiersContainer" class="card-list"></div>
+            <div class="button-group">
+                <button type="button" id="addRelatedIdentifierBtn" class="btn-secondary">Add Related Identifier</button>
+            </div>
         </div>
 
         <div class="form-section">
@@ -533,12 +547,62 @@
 
         const KEYWORD_CATALOG = buildKeywordCatalog();
         const KEYWORD_MAX_SUGGESTIONS = 8;
+        const INVENIO_RESOURCE_TYPES = [
+            { id: 'audio', label: 'Audio' },
+            { id: 'dataset', label: 'Dataset' },
+            { id: 'event', label: 'Event' },
+            { id: 'image', label: 'Image' },
+            { id: 'image-diagram', label: 'Image / Diagram' },
+            { id: 'image-drawing', label: 'Image / Drawing' },
+            { id: 'image-figure', label: 'Image / Figure' },
+            { id: 'image-other', label: 'Image / Other' },
+            { id: 'image-photo', label: 'Image / Photo' },
+            { id: 'image-plot', label: 'Image / Plot' },
+            { id: 'lesson', label: 'Lesson' },
+            { id: 'model', label: 'Model' },
+            { id: 'other', label: 'Other' },
+            { id: 'physicalobject', label: 'Physical object' },
+            { id: 'poster', label: 'Poster' },
+            { id: 'presentation', label: 'Presentation' },
+            { id: 'publication', label: 'Publication' },
+            { id: 'publication-annotationcollection', label: 'Publication / Annotation collection' },
+            { id: 'publication-book', label: 'Publication / Book' },
+            { id: 'publication-bookchapter', label: 'Publication / Book chapter' },
+            { id: 'publication-conferencepaper', label: 'Publication / Conference paper' },
+            { id: 'publication-conferenceproceeding', label: 'Publication / Conference proceeding' },
+            { id: 'publication-datapaper', label: 'Publication / Data paper' },
+            { id: 'publication-dissertation', label: 'Publication / Dissertation' },
+            { id: 'publication-journal', label: 'Publication / Journal' },
+            { id: 'publication-journalarticle', label: 'Publication / Journal article' },
+            { id: 'publication-other', label: 'Publication / Other' },
+            { id: 'publication-outputmanagementplan', label: 'Publication / Output management plan' },
+            { id: 'publication-patent', label: 'Publication / Patent' },
+            { id: 'publication-peerreview', label: 'Publication / Peer review' },
+            { id: 'publication-preprint', label: 'Publication / Preprint' },
+            { id: 'publication-projectdeliverable', label: 'Publication / Project deliverable' },
+            { id: 'publication-projectmilestone', label: 'Publication / Project milestone' },
+            { id: 'publication-proposal', label: 'Publication / Proposal' },
+            { id: 'publication-report', label: 'Publication / Report' },
+            { id: 'publication-softwaredocumentation', label: 'Publication / Software documentation' },
+            { id: 'publication-standard', label: 'Publication / Standard' },
+            { id: 'publication-taxonomictreatment', label: 'Publication / Taxonomic treatment' },
+            { id: 'publication-technicalnote', label: 'Publication / Technical note' },
+            { id: 'publication-thesis', label: 'Publication / Thesis' },
+            { id: 'publication-workingpaper', label: 'Publication / Working paper' },
+            { id: 'software', label: 'Software' },
+            { id: 'software-computationalnotebook', label: 'Software / Computational notebook' },
+            { id: 'video', label: 'Video' },
+            { id: 'workflow', label: 'Workflow' }
+        ];
 
         let creatorCounter = 0;
+        let contributorCounter = 0;
+        let relatedIdentifierCounter = 0;
         let observationCounter = 0;
 
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('publicationDate').valueAsDate = new Date();
+            populateTopLevelResourceTypes();
 
             document.getElementById('discipline').addEventListener('change', refreshStudyControls);
             document.getElementById('field').addEventListener('change', refreshStudyControls);
@@ -591,8 +655,16 @@
                 addCreator();
             });
 
+            document.getElementById('addContributorBtn').addEventListener('click', function() {
+                addContributor();
+            });
+
             document.getElementById('addObservationBtn').addEventListener('click', function() {
                 addObservation();
+            });
+
+            document.getElementById('addRelatedIdentifierBtn').addEventListener('click', function() {
+                addRelatedIdentifier();
             });
 
             document.getElementById('metadataForm').addEventListener('submit', function(e) {
@@ -625,6 +697,29 @@
 
         function uniqueList(values) {
             return Array.from(new Set(values.filter(Boolean)));
+        }
+
+        function buildOptionsHtml(options, includeBlank) {
+            let html = '';
+            if (includeBlank) {
+                html += '<option value="">-- Select --</option>';
+            }
+            options.forEach(function(option) {
+                html += '<option value="' + option.id + '">' + option.label + '</option>';
+            });
+            return html;
+        }
+
+        function populateTopLevelResourceTypes() {
+            const resourceTypeSelect = document.getElementById('resourceType');
+            resourceTypeSelect.innerHTML = buildOptionsHtml(INVENIO_RESOURCE_TYPES, false);
+            if (!resourceTypeSelect.value) {
+                resourceTypeSelect.value = 'dataset';
+            }
+        }
+
+        function relatedIdentifierResourceTypeOptionsHtml() {
+            return buildOptionsHtml(INVENIO_RESOURCE_TYPES, true);
         }
 
         function keywordIdentity(value) {
@@ -1060,6 +1155,190 @@
             });
         }
 
+        function contributorCardTemplate(cardId) {
+            return '' +
+                '<div class="card contributor-card" data-card-id="' + cardId + '">' +
+                '  <div class="card-header">' +
+                '    <h4 class="card-title contributor-title">Contributor</h4>' +
+                '    <button type="button" class="btn-small btn-danger remove-contributor">Remove</button>' +
+                '  </div>' +
+                '  <label class="required">First Name</label>' +
+                '  <input type="text" class="contributor-first-name" required>' +
+                '  <label class="required">Last Name</label>' +
+                '  <input type="text" class="contributor-last-name" required>' +
+                '  <label>Institution/Affiliation</label>' +
+                '  <input type="text" class="contributor-affiliation">' +
+                '  <label class="required">Contributor Role</label>' +
+                '  <select class="contributor-role" required>' +
+                '    <option value="">-- Select --</option>' +
+                '    <option value="contactperson">Contact Person</option>' +
+                '    <option value="datacollector">Data Collector</option>' +
+                '    <option value="datacurator">Data Curator</option>' +
+                '    <option value="datamanager">Data Manager</option>' +
+                '    <option value="distributor">Distributor</option>' +
+                '    <option value="editor">Editor</option>' +
+                '    <option value="hostinginstitution">Hosting Institution</option>' +
+                '    <option value="producer">Producer</option>' +
+                '    <option value="projectleader">Project Leader</option>' +
+                '    <option value="projectmanager">Project Manager</option>' +
+                '    <option value="projectmember">Project Member</option>' +
+                '    <option value="registrationagency">Registration Agency</option>' +
+                '    <option value="registrationauthority">Registration Authority</option>' +
+                '    <option value="relatedperson">Related Person</option>' +
+                '    <option value="researcher">Researcher</option>' +
+                '    <option value="researchgroup">Research Group</option>' +
+                '    <option value="rightsholder">Rights Holder</option>' +
+                '    <option value="sponsor">Sponsor</option>' +
+                '    <option value="supervisor">Supervisor</option>' +
+                '    <option value="workpackageleader">Work Package Leader</option>' +
+                '    <option value="other">Other</option>' +
+                '  </select>' +
+                '</div>';
+        }
+
+        function addContributor(initialData) {
+            contributorCounter += 1;
+            const contributorContainer = document.getElementById('contributorsContainer');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = contributorCardTemplate(contributorCounter);
+            const card = wrapper.firstChild;
+
+            if (initialData) {
+                card.querySelector('.contributor-first-name').value = initialData.given_name || '';
+                card.querySelector('.contributor-last-name').value = initialData.family_name || '';
+                card.querySelector('.contributor-affiliation').value = initialData.affiliation || '';
+                card.querySelector('.contributor-role').value = initialData.role || '';
+            }
+
+            card.querySelector('.remove-contributor').addEventListener('click', function() {
+                removeContributor(card);
+            });
+
+            contributorContainer.appendChild(card);
+            renumberContributorCards();
+        }
+
+        function removeContributor(card) {
+            card.remove();
+            renumberContributorCards();
+        }
+
+        function renumberContributorCards() {
+            const contributorCards = Array.from(document.querySelectorAll('.contributor-card'));
+            contributorCards.forEach(function(card, index) {
+                card.querySelector('.contributor-title').textContent = 'Contributor ' + (index + 1);
+            });
+        }
+
+        function relatedIdentifierCardTemplate(cardId) {
+            return '' +
+                '<div class="card related-identifier-card" data-card-id="' + cardId + '">' +
+                '  <div class="card-header">' +
+                '    <h4 class="card-title related-identifier-title">Related Identifier</h4>' +
+                '    <button type="button" class="btn-small btn-danger remove-related-identifier">Remove</button>' +
+                '  </div>' +
+                '  <label class="required">Identifier</label>' +
+                '  <input type="text" class="ri-identifier" required placeholder="e.g., 10.1234/example-doi or https://example.org/code">' +
+                '  <label>Identifier Scheme</label>' +
+                '  <select class="ri-scheme">' +
+                '    <option value="">-- Select --</option>' +
+                '    <option value="doi">DOI</option>' +
+                '    <option value="url">URL</option>' +
+                '    <option value="handle">Handle</option>' +
+                '    <option value="arxiv">arXiv</option>' +
+                '    <option value="pmid">PMID</option>' +
+                '    <option value="isbn">ISBN</option>' +
+                '    <option value="issn">ISSN</option>' +
+                '    <option value="urn">URN</option>' +
+                '    <option value="__other__">Other</option>' +
+                '  </select>' +
+                '  <label class="hidden ri-other-scheme-label">Other Scheme</label>' +
+                '  <input type="text" class="hidden ri-other-scheme" placeholder="e.g., w3id">' +
+                '  <label class="required">Relation Type</label>' +
+                '  <select class="ri-relation-type" required>' +
+                '    <option value="">-- Select --</option>' +
+                '    <option value="cites">Cites</option>' +
+                '    <option value="iscitedby">Is Cited By</option>' +
+                '    <option value="issupplementto">Is Supplement To</option>' +
+                '    <option value="issupplementedby">Is Supplemented By</option>' +
+                '    <option value="ispartof">Is Part Of</option>' +
+                '    <option value="haspart">Has Part</option>' +
+                '    <option value="isnewversionof">Is New Version Of</option>' +
+                '    <option value="ispreviousversionof">Is Previous Version Of</option>' +
+                '    <option value="issourceof">Is Source Of</option>' +
+                '    <option value="isderivedfrom">Is Derived From</option>' +
+                '    <option value="references">References</option>' +
+                '    <option value="isreferencedby">Is Referenced By</option>' +
+                '    <option value="documents">Documents</option>' +
+                '    <option value="isdocumentedby">Is Documented By</option>' +
+                '    <option value="isidenticalto">Is Identical To</option>' +
+                '    <option value="isvariantformof">Is Variant Form Of</option>' +
+                '    <option value="isoriginalformof">Is Original Form Of</option>' +
+                '    <option value="requires">Requires</option>' +
+                '    <option value="isrequiredby">Is Required By</option>' +
+                '    <option value="reviews">Reviews</option>' +
+                '    <option value="isreviewedby">Is Reviewed By</option>' +
+                '    <option value="compiles">Compiles</option>' +
+                '    <option value="iscompiledby">Is Compiled By</option>' +
+                '    <option value="hasmetadata">Has Metadata</option>' +
+                '    <option value="ismetadatafor">Is Metadata For</option>' +
+                '    <option value="obsoletes">Obsoletes</option>' +
+                '    <option value="isobsoletedby">Is Obsoleted By</option>' +
+                '  </select>' +
+                '  <label>Related Resource Type</label>' +
+                '  <select class="ri-resource-type">' +
+                     relatedIdentifierResourceTypeOptionsHtml() +
+                '  </select>' +
+                '  <label>Description (optional)</label>' +
+                '  <textarea class="ri-description" placeholder="Optional context for this relationship"></textarea>' +
+                '</div>';
+        }
+
+        function addRelatedIdentifier(initialData) {
+            relatedIdentifierCounter += 1;
+            const relatedContainer = document.getElementById('relatedIdentifiersContainer');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = relatedIdentifierCardTemplate(relatedIdentifierCounter);
+            const card = wrapper.firstChild;
+
+            card.querySelector('.remove-related-identifier').addEventListener('click', function() {
+                removeRelatedIdentifier(card);
+            });
+
+            card.querySelector('.ri-scheme').addEventListener('change', function() {
+                toggleOtherInput(
+                    card.querySelector('.ri-scheme'),
+                    card.querySelector('.ri-other-scheme-label'),
+                    card.querySelector('.ri-other-scheme')
+                );
+            });
+
+            if (initialData) {
+                card.querySelector('.ri-identifier').value = initialData.identifier || '';
+                card.querySelector('.ri-relation-type').value = initialData.relation_type || '';
+            }
+
+            relatedContainer.appendChild(card);
+            toggleOtherInput(
+                card.querySelector('.ri-scheme'),
+                card.querySelector('.ri-other-scheme-label'),
+                card.querySelector('.ri-other-scheme')
+            );
+            renumberRelatedIdentifierCards();
+        }
+
+        function removeRelatedIdentifier(card) {
+            card.remove();
+            renumberRelatedIdentifierCards();
+        }
+
+        function renumberRelatedIdentifierCards() {
+            const relatedCards = Array.from(document.querySelectorAll('.related-identifier-card'));
+            relatedCards.forEach(function(card, index) {
+                card.querySelector('.related-identifier-title').textContent = 'Related Identifier ' + (index + 1);
+            });
+        }
+
         function observationCardTemplate(cardId) {
             return '' +
                 '<div class="card observation-card" data-card-id="' + cardId + '">' +
@@ -1364,6 +1643,28 @@
                 }
             });
 
+            const contributorCards = Array.from(document.querySelectorAll('.contributor-card'));
+            contributorCards.forEach(function(card, index) {
+                const firstNameInput = card.querySelector('.contributor-first-name');
+                const lastNameInput = card.querySelector('.contributor-last-name');
+                const roleInput = card.querySelector('.contributor-role');
+
+                if (!firstNameInput.value.trim()) {
+                    errors.push('Contributor ' + (index + 1) + ': first name is required.');
+                    firstNameInput.classList.add('invalid');
+                }
+
+                if (!lastNameInput.value.trim()) {
+                    errors.push('Contributor ' + (index + 1) + ': last name is required.');
+                    lastNameInput.classList.add('invalid');
+                }
+
+                if (!roleInput.value) {
+                    errors.push('Contributor ' + (index + 1) + ': role is required.');
+                    roleInput.classList.add('invalid');
+                }
+            });
+
             const keywords = normalizeKeywordList(parseCommaList(document.getElementById('keywords').value));
             if (keywords.length === 0) {
                 errors.push('Keywords: provide at least one keyword.');
@@ -1376,6 +1677,29 @@
                 errors.push('Funding: provide Funder Name when Award/Grant Number is set.');
                 funderNameInput.classList.add('invalid');
             }
+
+            const relatedCards = Array.from(document.querySelectorAll('.related-identifier-card'));
+            relatedCards.forEach(function(card, index) {
+                const identifierInput = card.querySelector('.ri-identifier');
+                const schemeInput = card.querySelector('.ri-scheme');
+                const otherSchemeInput = card.querySelector('.ri-other-scheme');
+                const relationTypeInput = card.querySelector('.ri-relation-type');
+
+                if (!identifierInput.value.trim()) {
+                    errors.push('Related Identifier ' + (index + 1) + ': identifier is required.');
+                    identifierInput.classList.add('invalid');
+                }
+
+                if (!relationTypeInput.value) {
+                    errors.push('Related Identifier ' + (index + 1) + ': relation type is required.');
+                    relationTypeInput.classList.add('invalid');
+                }
+
+                if (schemeInput.value === '__other__' && !otherSchemeInput.value.trim()) {
+                    errors.push('Related Identifier ' + (index + 1) + ': provide other scheme value.');
+                    otherSchemeInput.classList.add('invalid');
+                }
+            });
 
             const subfieldSelect = document.getElementById('subfield');
             const otherSubfieldInput = document.getElementById('otherSubfield');
@@ -1492,6 +1816,82 @@
             return creators;
         }
 
+        function collectContributors() {
+            const contributors = [];
+            Array.from(document.querySelectorAll('.contributor-card')).forEach(function(card) {
+                const givenName = card.querySelector('.contributor-first-name').value.trim();
+                const familyName = card.querySelector('.contributor-last-name').value.trim();
+                const affiliation = card.querySelector('.contributor-affiliation').value.trim();
+                const role = card.querySelector('.contributor-role').value;
+
+                if (!givenName || !familyName || !role) {
+                    return;
+                }
+
+                const contributor = {
+                    person_or_org: {
+                        type: 'personal',
+                        given_name: givenName,
+                        family_name: familyName
+                    },
+                    role: {
+                        id: role
+                    }
+                };
+
+                if (affiliation) {
+                    contributor.affiliations = [{ name: affiliation }];
+                }
+
+                contributors.push(contributor);
+            });
+
+            return contributors;
+        }
+
+        function collectRelatedIdentifiers() {
+            const relatedIdentifiers = [];
+
+            Array.from(document.querySelectorAll('.related-identifier-card')).forEach(function(card) {
+                const identifier = card.querySelector('.ri-identifier').value.trim();
+                const schemeValue = card.querySelector('.ri-scheme').value;
+                const otherScheme = card.querySelector('.ri-other-scheme').value.trim();
+                const relationType = card.querySelector('.ri-relation-type').value;
+                const resourceTypeValue = card.querySelector('.ri-resource-type').value;
+                const description = card.querySelector('.ri-description').value.trim();
+
+                if (!identifier || !relationType) {
+                    return;
+                }
+
+                const relatedIdentifier = {
+                    identifier: identifier,
+                    relation_type: {
+                        id: relationType
+                    }
+                };
+
+                const scheme = schemeValue === '__other__' ? otherScheme : schemeValue;
+                if (scheme) {
+                    relatedIdentifier.scheme = scheme;
+                }
+
+                if (resourceTypeValue) {
+                    relatedIdentifier.resource_type = {
+                        id: resourceTypeValue
+                    };
+                }
+
+                if (description) {
+                    relatedIdentifier.description = description;
+                }
+
+                relatedIdentifiers.push(relatedIdentifier);
+            });
+
+            return relatedIdentifiers;
+        }
+
         function collectObservations() {
             return Array.from(document.querySelectorAll('.observation-card')).map(function(card) {
                 const observation = {
@@ -1573,8 +1973,10 @@
 
         function generateJSON() {
             const creators = collectCreators();
+            const contributors = collectContributors();
             const discipline = document.getElementById('discipline').value;
             const observations = collectObservations();
+            const relatedIdentifiers = collectRelatedIdentifiers();
             const keywords = normalizeKeywordList(parseCommaList(document.getElementById('keywords').value));
             document.getElementById('keywords').value = keywords.join(', ');
 
@@ -1619,6 +2021,10 @@
                 metadata.version = version;
             }
 
+            if (contributors.length) {
+                metadata.contributors = contributors;
+            }
+
             const funderName = document.getElementById('funderName').value.trim();
             const awardNumber = document.getElementById('awardNumber').value.trim();
             if (funderName || awardNumber) {
@@ -1635,6 +2041,10 @@
             const license = document.getElementById('license').value;
             if (license) {
                 metadata.rights = [{ id: license }];
+            }
+
+            if (relatedIdentifiers.length) {
+                metadata.related_identifiers = relatedIdentifiers;
             }
 
             const jsonString = JSON.stringify(metadata, null, 2);
@@ -1666,9 +2076,13 @@
                 document.getElementById('discipline').value = 'fluid_dynamics';
 
                 document.getElementById('creatorsContainer').innerHTML = '';
+                document.getElementById('contributorsContainer').innerHTML = '';
                 document.getElementById('observationsContainer').innerHTML = '';
+                document.getElementById('relatedIdentifiersContainer').innerHTML = '';
                 creatorCounter = 0;
+                contributorCounter = 0;
                 observationCounter = 0;
+                relatedIdentifierCounter = 0;
 
                 clearErrors();
                 document.getElementById('output').style.display = 'none';
