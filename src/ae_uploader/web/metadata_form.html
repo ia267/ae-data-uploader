@@ -961,7 +961,10 @@
             });
 
             if (!response.ok) {
-                throw new Error('keyword_api_http_' + response.status);
+                const responseText = await response.text();
+                throw new Error(
+                    'keyword_api_http_' + response.status + '_' + (responseText || '').slice(0, 180)
+                );
             }
 
             const payload = await response.json();
@@ -1032,9 +1035,22 @@
                     }
                     if (error.message === 'invalid_keyword_api_url') {
                         setKeywordApiStatus('Keyword API URL is invalid for this page context; use a full https:// URL.', true);
+                    } else if (error.name === 'TypeError') {
+                        setKeywordApiStatus(
+                            'Keyword API blocked or unreachable (likely CORS/network). Open DevTools Console/Network for details.',
+                            true
+                        );
+                    } else if (error.message.indexOf('keyword_api_http_') === 0) {
+                        const prefix = 'keyword_api_http_';
+                        const statusPart = error.message.substring(prefix.length).split('_')[0];
+                        setKeywordApiStatus(
+                            'Keyword API returned HTTP ' + statusPart + ' (check endpoint/facet config).',
+                            true
+                        );
                     } else {
                         setKeywordApiStatus('Keyword API unavailable; using local suggestions.', true);
                     }
+                    console.warn('Keyword API autocomplete error:', error);
                     return;
                 }
 
