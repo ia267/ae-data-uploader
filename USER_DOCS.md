@@ -25,10 +25,12 @@ Manual `.env`:
 INVENIO_URL=https://your-invenio-instance.org
 INVENIO_TOKEN=your_access_token
 CUSTOM_FIELD_NAMESPACE=domain
+INVENIO_COMMUNITY=ae-dept-data
 ```
 
 Notes:
 - `CUSTOM_FIELD_NAMESPACE` is optional for most users; default is `domain`.
+- `INVENIO_COMMUNITY` is optional; default is `ae-dept-data`.
 - You can also pass credentials on each command with `--url` and `--token`.
 
 ## Create Metadata

@@ -18,7 +18,13 @@ from requests.exceptions import RequestException
 class InvenioClient:
     """Client for interacting with Invenio-RDM API."""
     
-    def __init__(self, base_url: str, access_token: str, custom_field_namespace: str = "domain"):
+    def __init__(
+        self,
+        base_url: str,
+        access_token: str,
+        custom_field_namespace: str = "domain",
+        community: str = "ae-dept-data",
+    ):
         """
         Initialize the Invenio client.
         
@@ -27,10 +33,12 @@ class InvenioClient:
             access_token: Personal access token for authentication
             custom_field_namespace: Namespace for custom fields in Invenio (default: "domain")
                                    Must match the configuration in your Invenio instance
+            community: Community ID for draft submissions (default: "ae-dept-data")
         """
         self.base_url = base_url.rstrip('/')
         self.access_token = access_token
         self.custom_field_namespace = custom_field_namespace
+        self.community = community.strip() if community else None
         self.session = requests.Session()
         self.session.verify = True
         self.session.headers.update({
@@ -67,6 +75,11 @@ class InvenioClient:
         """
         # Transform metadata to Invenio format
         invenio_metadata = self._transform_to_invenio_format(metadata)
+
+        if self.community:
+            invenio_metadata["parent"] = {
+                "communities": [{"id": self.community}]
+            }
         
         url = f"{self.base_url}/api/records"
         
@@ -299,6 +312,8 @@ def create_client_from_env() -> InvenioClient:
     Expects:
         INVENIO_URL: Base URL of Invenio instance
         INVENIO_TOKEN: Access token
+        CUSTOM_FIELD_NAMESPACE: Namespace for custom fields (optional, defaults to "domain")
+        INVENIO_COMMUNITY: Community ID for submissions (optional, defaults to "ae-dept-data")
         
     Returns:
         Configured InvenioClient instance
@@ -308,10 +323,12 @@ def create_client_from_env() -> InvenioClient:
     """
     url = os.environ.get('INVENIO_URL')
     token = os.environ.get('INVENIO_TOKEN')
+    namespace = os.environ.get('CUSTOM_FIELD_NAMESPACE', 'domain')
+    community = os.environ.get('INVENIO_COMMUNITY', 'ae-dept-data')
     
     if not url:
         raise ValueError("INVENIO_URL environment variable not set")
     if not token:
         raise ValueError("INVENIO_TOKEN environment variable not set")
     
-    return InvenioClient(url, token)
+    return InvenioClient(url, token, namespace, community)

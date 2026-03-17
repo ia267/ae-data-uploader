@@ -41,7 +41,13 @@ def _format_bytes(size: int) -> str:
     return f"{size:.2f} PB"
 
 
-def _save_credentials(env_path: Path, url: str, token: str, namespace: str = "domain"):
+def _save_credentials(
+    env_path: Path,
+    url: str,
+    token: str,
+    namespace: str = "domain",
+    community: str = "ae-dept-data",
+):
     """Save credentials to .env file with secure permissions."""
     with open(env_path, 'w') as f:
         f.write("# Invenio-RDM Credentials\n")
@@ -49,6 +55,7 @@ def _save_credentials(env_path: Path, url: str, token: str, namespace: str = "do
         f.write(f"INVENIO_URL={url}\n")
         f.write(f"INVENIO_TOKEN={token}\n")
         f.write(f"CUSTOM_FIELD_NAMESPACE={namespace}\n")
+        f.write(f"INVENIO_COMMUNITY={community}\n")
     
     # Secure file permissions: read/write for owner only (600)
     os.chmod(env_path, stat.S_IRUSR | stat.S_IWUSR)
@@ -78,6 +85,8 @@ def cli():
 @click.option('--url', '-u', help='Invenio base URL', envvar='INVENIO_URL')
 @click.option('--namespace', '-n', help='Custom field namespace', 
               envvar='CUSTOM_FIELD_NAMESPACE', default='domain')
+@click.option('--community', '-c', help='Community ID for submission',
+              envvar='INVENIO_COMMUNITY', default='ae-dept-data')
 @click.option('--metadata', '-m', 
               type=click.Path(exists=True),
               help='Path to metadata.json (default: looks in data_path parent directory)')
@@ -101,6 +110,7 @@ def upload(data_path: str,
            token: Optional[str],
            url: Optional[str],
            namespace: str,
+           community: str,
            metadata: Optional[str],
            no_zip: bool,
            draft_only: bool,
@@ -162,9 +172,9 @@ def upload(data_path: str,
         env_path = Path('.env')
         if env_path.exists():
             if click.confirm('\n.env file already exists. Overwrite?', default=False):
-                _save_credentials(env_path, url, token, namespace)
+                _save_credentials(env_path, url, token, namespace, community)
         else:
-            _save_credentials(env_path, url, token, namespace)
+            _save_credentials(env_path, url, token, namespace, community)
             click.echo(f"[OK] Credentials saved to {env_path.absolute()}")
     
     # Determine if data_path is a file or directory
@@ -233,7 +243,7 @@ def upload(data_path: str,
     
     # Initialize Invenio client
     click.echo(f"\n[INFO] Connecting to {url}...")
-    client = InvenioClient(url, token, namespace)
+    client = InvenioClient(url, token, namespace, community)
 
     # Apply the insecure flag
     if insecure:
@@ -683,10 +693,12 @@ def info():
     url = os.environ.get('INVENIO_URL', 'Not set')
     token = os.environ.get('INVENIO_TOKEN')
     namespace = os.environ.get('CUSTOM_FIELD_NAMESPACE', 'domain')
+    community = os.environ.get('INVENIO_COMMUNITY', 'ae-dept-data')
     
     click.echo(f"  INVENIO_URL: {url}")
     click.echo(f"  INVENIO_TOKEN: {'Set' if token else 'Not set'}")
     click.echo(f"  CUSTOM_FIELD_NAMESPACE: {namespace}")
+    click.echo(f"  INVENIO_COMMUNITY: {community}")
     
     if token and url:
         click.echo("\n[OK] Configuration looks good!")
@@ -766,11 +778,16 @@ def configure(insecure: bool):
     click.echo("  The namespace for domain-specific metadata in Invenio")
     click.echo("  This must match your Invenio configuration")
     namespace = click.prompt('\nEnter namespace', type=str, default='domain', show_default=True)
+
+    # Prompt for community ID
+    click.echo("\nStep 4: Community ID (optional)")
+    click.echo("  Drafts will be submitted to this Invenio community")
+    community = click.prompt('\nEnter community ID', type=str, default='ae-dept-data', show_default=True)
     
     # Test connection
     click.echo("\n[INFO] Testing connection...")
     try:
-        client = InvenioClient(url, token, namespace)
+        client = InvenioClient(url, token, namespace, community)
 
         if insecure:
             client.session.verify = False
@@ -793,7 +810,7 @@ def configure(insecure: bool):
             return
     
     # Save credentials
-    _save_credentials(env_path, url, token, namespace)
+    _save_credentials(env_path, url, token, namespace, community)
     click.echo(f"\n[OK] Credentials saved to {env_path.absolute()}")
     click.echo("\nNext steps:")
     click.echo("  ae-upload configure")

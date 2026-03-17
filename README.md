@@ -28,6 +28,9 @@ ae-upload upload ./my_data_directory         # creates draft by default
 # ae-upload upload ./my_data_directory --publish
 ```
 
+`ae-upload configure` stores `INVENIO_COMMUNITY` (default: `ae-dept-data`).
+Override per upload with `ae-upload upload ... --community <community-id>`.
+
 See `QUICKSTART.md` for the minimal first-run flow.
 
 ## Common Options

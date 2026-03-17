@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from unittest.mock import Mock
 
 from ae_uploader.client import InvenioClient, create_client_from_env
 
@@ -78,9 +79,26 @@ def test_create_client_from_env_requires_token(monkeypatch):
 def test_create_client_from_env_builds_client(monkeypatch):
     monkeypatch.setenv("INVENIO_URL", "https://example.org")
     monkeypatch.setenv("INVENIO_TOKEN", "token")
+    monkeypatch.setenv("CUSTOM_FIELD_NAMESPACE", "domain")
+    monkeypatch.setenv("INVENIO_COMMUNITY", "ae-dept-data")
 
     client = create_client_from_env()
 
     assert client.base_url == "https://example.org"
     assert client.access_token == "token"
     assert client.custom_field_namespace == "domain"
+    assert client.community == "ae-dept-data"
+
+
+def test_create_draft_sets_parent_community(valid_metadata: dict):
+    client = InvenioClient("https://example.org", "token", community="ae-dept-data")
+
+    response = Mock()
+    response.raise_for_status = Mock()
+    response.json.return_value = {"id": "12345"}
+    client.session.post = Mock(return_value=response)
+
+    client.create_draft(valid_metadata)
+
+    _, kwargs = client.session.post.call_args
+    assert kwargs["json"]["parent"] == {"communities": [{"id": "ae-dept-data"}]}

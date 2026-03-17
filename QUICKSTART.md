@@ -17,6 +17,7 @@ ae-upload configure
 ```
 
 This saves credentials to `.env` in your current directory.
+By default uploads target community `ae-dept-data` (stored as `INVENIO_COMMUNITY`), configurable via `ae-upload configure`.
 
 ## 2. Create `metadata.json`
 
@@ -40,5 +41,6 @@ ae-upload upload ./your_data_directory
 ```
 
 Place `metadata.json` in the data directory, or pass it with `--metadata /path/to/metadata.json`.
+You can override community per command using `--community <community-id>`.
 
 For advanced options and troubleshooting, see `USER_DOCS.md`.

@@ -82,10 +82,11 @@ def test_configure_command_shows_export_form_next_steps(monkeypatch):
             return _DummyResponse()
 
     class _DummyClient:
-        def __init__(self, url, token, namespace):
+        def __init__(self, url, token, namespace, community):
             self.base_url = url
             self.token = token
             self.namespace = namespace
+            self.community = community
             self.session = _DummySession()
 
     monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
@@ -95,7 +96,7 @@ def test_configure_command_shows_export_form_next_steps(monkeypatch):
         result = runner.invoke(
             cli,
             ["configure"],
-            input="https://example.org\nsecret-token\nsecret-token\ndomain\n",
+            input="https://example.org\nsecret-token\nsecret-token\ndomain\nae-dept-data\n",
         )
 
     assert result.exit_code == 0
@@ -111,10 +112,11 @@ def test_configure_command_shows_export_form_next_steps(monkeypatch):
 def test_save_credentials_writes_secure_env_file(tmp_path):
     env_path = tmp_path / ".env"
 
-    _save_credentials(env_path, "https://example.org", "token", "domain")
+    _save_credentials(env_path, "https://example.org", "token", "domain", "ae-dept-data")
 
     env_contents = env_path.read_text(encoding="utf-8")
     assert "INVENIO_URL=https://example.org" in env_contents
     assert "INVENIO_TOKEN=token" in env_contents
     assert "CUSTOM_FIELD_NAMESPACE=domain" in env_contents
+    assert "INVENIO_COMMUNITY=ae-dept-data" in env_contents
     assert env_path.stat().st_mode & 0o777 == 0o600
