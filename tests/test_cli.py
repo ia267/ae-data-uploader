@@ -96,7 +96,7 @@ def test_configure_command_shows_export_form_next_steps(monkeypatch):
         result = runner.invoke(
             cli,
             ["configure"],
-            input="https://example.org\nsecret-token\nsecret-token\ndomain\nae-dept-data\n",
+            input="https://example.org\nsecret-token\ndomain\nae-dept-data\n",
         )
 
     assert result.exit_code == 0

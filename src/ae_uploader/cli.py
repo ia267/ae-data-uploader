@@ -766,13 +766,6 @@ def configure(insecure: bool):
     click.echo("\n  The token should have 'deposit:write' permissions")
     token = click.prompt('\nEnter access token', type=str, hide_input=True)
     
-    # Confirm token (re-enter for safety)
-    token_confirm = click.prompt('Confirm access token', type=str, hide_input=True)
-    
-    if token != token_confirm:
-        click.echo("\n[ERROR] Tokens don't match. Please try again.", err=True)
-        sys.exit(1)
-    
     # Prompt for custom field namespace
     click.echo("\nStep 3: Custom Field Namespace (optional)")
     click.echo("  The namespace for domain-specific metadata in Invenio")
