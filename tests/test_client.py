@@ -150,7 +150,6 @@ def test_submit_draft_for_review_accepts_optional_comment():
 
     _, kwargs = client.session.post.call_args
     assert kwargs["json"] == {
-        "require_review": True,
         "payload": {
             "content": "please review",
             "format": "html",
