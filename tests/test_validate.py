@@ -34,7 +34,7 @@ def test_validate_metadata_accepts_contributors_and_related_identifiers(valid_me
                 "identifiers": [
                     {
                         "scheme": "orcid",
-                        "identifier": "0000-0001-5000-0007",
+                        "identifier": "0000-0002-1825-0097",
                     }
                 ],
             },
@@ -61,6 +61,19 @@ def test_validate_metadata_accepts_multiple_regimes(valid_metadata: dict):
     is_valid, errors = validate_metadata(valid_metadata)
     assert is_valid is True
     assert errors == []
+
+
+def test_validate_metadata_rejects_invalid_orcid(valid_metadata: dict):
+    valid_metadata["creators"][0]["person_or_org"]["identifiers"] = [
+        {
+            "scheme": "orcid",
+            "identifier": "0000-0000-0000-0000",
+        }
+    ]
+
+    is_valid, errors = validate_metadata(valid_metadata)
+    assert is_valid is False
+    assert any("Invalid ORCID identifier" in error for error in errors)
 
 
 def test_validate_metadata_rejects_missing_required_field(valid_metadata: dict):
