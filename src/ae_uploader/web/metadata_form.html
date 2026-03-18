@@ -414,11 +414,6 @@
                 <div class="help-text" id="keywordSuggestions">Suggested keywords are updated from the selected field.</div>
                 <div class="help-text" id="keywordNormalizationHint"></div>
             </div>
-
-            <div id="structuresSection" class="hidden">
-                <h3>Structures Notes</h3>
-                <div class="help-text">Structures uses the same Study Metadata and Observations blocks as fluid_dynamics.</div>
-            </div>
         </div>
 
         <div id="observationsSection" class="form-section">
@@ -1269,7 +1264,6 @@
 
             document.getElementById('fluidStudySection').classList.remove('hidden');
             document.getElementById('observationsSection').classList.remove('hidden');
-            document.getElementById('structuresSection').classList.toggle('hidden', discipline !== 'structures');
             document.getElementById('addObservationBtn').style.display = 'inline-block';
 
             fieldSelect.required = true;
