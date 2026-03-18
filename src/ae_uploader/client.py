@@ -11,6 +11,23 @@ from typing import Dict, Any, List, Optional
 import zipfile
 import tempfile
 
+
+DEFAULT_COMMUNITY = "ae-dept-data"
+
+
+def parse_community_list(value: Optional[str]) -> List[str]:
+    """Parse comma-separated community references into a de-duplicated list."""
+    communities: List[str] = []
+    seen = set()
+    for item in (value or "").replace("\n", ",").split(","):
+        community = item.strip()
+        if not community or community in seen:
+            continue
+        communities.append(community)
+        seen.add(community)
+    return communities
+
+
 import requests
 from requests.exceptions import RequestException
 
@@ -23,7 +40,8 @@ class InvenioClient:
         base_url: str,
         access_token: str,
         custom_field_namespace: str = "domain",
-        community: str = "ae-dept-data",
+        community: str = DEFAULT_COMMUNITY,
+        allowed_communities: Optional[List[str]] = None,
     ):
         """
         Initialise the Invenio client.
@@ -33,12 +51,20 @@ class InvenioClient:
             access_token: Personal access token for authentication
             custom_field_namespace: Namespace for custom fields in Invenio (default: "domain")
                                    Must match the configuration in your Invenio instance
-            community: Community ID for draft submissions (default: "ae-dept-data")
+            community: Default community ID/slug for draft submissions
+            allowed_communities: Optional allowlist of community IDs/slugs
+                that uploads may target
         """
         self.base_url = base_url.rstrip('/')
         self.access_token = access_token
         self.custom_field_namespace = custom_field_namespace
         self.community = community.strip() if community else None
+        self.allowed_communities = []
+        for community_ref in allowed_communities or []:
+            community_ref = community_ref.strip()
+            if community_ref and community_ref not in self.allowed_communities:
+                self.allowed_communities.append(community_ref)
+        self._community_id_cache: Dict[str, str] = {}
         self.session = requests.Session()
         self.session.verify = True
         self.session.headers.update({
@@ -82,6 +108,78 @@ class InvenioClient:
         response.raise_for_status()
         
         return response.json()
+
+    def _resolve_community_id(self, community_ref: str) -> str:
+        """Resolve a community UUID or slug to the canonical community UUID."""
+        community_ref = community_ref.strip()
+        if community_ref in self._community_id_cache:
+            return self._community_id_cache[community_ref]
+
+        detail_response = self.session.get(
+            f"{self.base_url}/api/communities/{community_ref}"
+        )
+        if detail_response.status_code == 200:
+            resolved_id = detail_response.json()["id"]
+            self._community_id_cache[community_ref] = resolved_id
+            self._community_id_cache[resolved_id] = resolved_id
+            return resolved_id
+        if detail_response.status_code != 404:
+            detail_response.raise_for_status()
+
+        search_response = self.session.get(
+            f"{self.base_url}/api/communities",
+            params={"q": f"slug:{community_ref}"},
+        )
+        search_response.raise_for_status()
+
+        hits = search_response.json().get("hits", {}).get("hits", [])
+        if len(hits) == 1:
+            resolved_id = hits[0]["id"]
+            self._community_id_cache[community_ref] = resolved_id
+            self._community_id_cache[resolved_id] = resolved_id
+            return resolved_id
+        if not hits:
+            raise ValueError(
+                f"Community '{community_ref}' was not found by ID or slug"
+            )
+        raise ValueError(
+            f"Community slug '{community_ref}' matched multiple communities"
+        )
+
+    def _ensure_allowed_community(self, target_community: str, resolved_target_id: str) -> None:
+        """Ensure the selected community is within the configured allowlist."""
+        if not self.allowed_communities:
+            return
+
+        resolved_allowed_ids = set()
+        invalid_allowed = []
+        for allowed_ref in self.allowed_communities:
+            try:
+                resolved_allowed_ids.add(self._resolve_community_id(allowed_ref))
+            except ValueError:
+                invalid_allowed.append(allowed_ref)
+
+        if invalid_allowed:
+            raise ValueError(
+                "Configured allowed communities were not found: "
+                + ", ".join(invalid_allowed)
+            )
+
+        if resolved_target_id not in resolved_allowed_ids:
+            raise ValueError(
+                f"Community '{target_community}' is not in the configured allowlist: "
+                + ", ".join(self.allowed_communities)
+            )
+
+    def resolve_submission_community(self, community_id: Optional[str] = None) -> str:
+        """Resolve and validate the community used for a submission."""
+        target_community = (community_id or self.community or "").strip()
+        if not target_community:
+            raise ValueError("A community ID is required to submit for review")
+
+        resolved_community_id = self._resolve_community_id(target_community)
+        self._ensure_allowed_community(target_community, resolved_community_id)
+        return resolved_community_id
     
     def upload_file(self, draft_id: str, file_path: str, filename: str = None) -> Dict[str, Any]:
         """
@@ -231,7 +329,8 @@ class InvenioClient:
 
         Args:
             draft_id: ID of the draft record
-            community_id: Community ID to submit to (defaults to configured client community)
+            community_id: Community ID or slug to submit to
+                (defaults to configured client community)
             review_comment: Optional review comment text
 
         Returns:
@@ -241,13 +340,11 @@ class InvenioClient:
             ValueError: If no community is configured/provided
             RequestException: If API request fails
         """
-        target_community = (community_id or self.community or "").strip()
-        if not target_community:
-            raise ValueError("A community ID is required to submit for review")
+        resolved_community_id = self.resolve_submission_community(community_id)
 
         review_url = f"{self.base_url}/api/records/{draft_id}/draft/review"
         review_payload = {
-            "receiver": {"community": target_community},
+            "receiver": {"community": resolved_community_id},
             "type": "community-submission",
         }
         review_response = self.session.put(review_url, json=review_payload)
@@ -357,7 +454,10 @@ def create_client_from_env() -> InvenioClient:
         INVENIO_URL: Base URL of Invenio instance
         INVENIO_TOKEN: Access token
         CUSTOM_FIELD_NAMESPACE: Namespace for custom fields (optional, defaults to "domain")
-        INVENIO_COMMUNITY: Community ID for submissions (optional, defaults to "ae-dept-data")
+        INVENIO_COMMUNITY: Default community ID or slug for submissions
+            (optional, defaults to "ae-dept-data")
+        INVENIO_COMMUNITIES: Optional comma-separated allowlist of approved
+            community IDs/slugs for uploads
         
     Returns:
         Configured InvenioClient instance
@@ -368,11 +468,25 @@ def create_client_from_env() -> InvenioClient:
     url = os.environ.get('INVENIO_URL')
     token = os.environ.get('INVENIO_TOKEN')
     namespace = os.environ.get('CUSTOM_FIELD_NAMESPACE', 'domain')
-    community = os.environ.get('INVENIO_COMMUNITY', 'ae-dept-data')
+    community = (os.environ.get('INVENIO_COMMUNITY') or '').strip()
+    allowed_communities = parse_community_list(os.environ.get('INVENIO_COMMUNITIES'))
+    if not allowed_communities and community:
+        allowed_communities = [community]
+    if not community:
+        if allowed_communities:
+            community = allowed_communities[0]
+        else:
+            community = DEFAULT_COMMUNITY
     
     if not url:
         raise ValueError("INVENIO_URL environment variable not set")
     if not token:
         raise ValueError("INVENIO_TOKEN environment variable not set")
     
-    return InvenioClient(url, token, namespace, community)
+    return InvenioClient(
+        url,
+        token,
+        namespace,
+        community,
+        allowed_communities=allowed_communities,
+    )

@@ -17,7 +17,7 @@ ae-upload configure
 ```
 
 This saves credentials to `.env` in your current directory.
-By default uploads target community `ae-dept-data` (stored as `INVENIO_COMMUNITY`), configurable via `ae-upload configure`.
+By default uploads target community `ae-dept-data` (stored as `INVENIO_COMMUNITY`).
 
 ## 2. Create `metadata.json`
 
@@ -37,12 +37,11 @@ ae-upload validate metadata.json
 ```bash
 ae-upload upload ./your_data_directory
 # use --publish to finalise:
-# - submits for community review when a community is configured
-# - fails without a community unless you add --force-direct-publish
+# - submits for repository review using the default destination
+# - fails only if you explicitly bypass the normal reviewed flow
 # ae-upload upload ./your_data_directory --publish
 ```
 
 Place `metadata.json` in the data directory, or pass it with `--metadata /path/to/metadata.json`.
-You can override community per command using `--community <community-id>`.
 
-For advanced options and troubleshooting, see `USER_DOCS.md`.
+For advanced options, including custom community targeting, see `USER_DOCS.md`.

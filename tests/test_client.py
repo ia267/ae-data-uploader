@@ -81,6 +81,7 @@ def test_create_client_from_env_builds_client(monkeypatch):
     monkeypatch.setenv("INVENIO_TOKEN", "token")
     monkeypatch.setenv("CUSTOM_FIELD_NAMESPACE", "domain")
     monkeypatch.setenv("INVENIO_COMMUNITY", "ae-dept-data")
+    monkeypatch.setenv("INVENIO_COMMUNITIES", "ae-dept-data,future-lab-data")
 
     client = create_client_from_env()
 
@@ -88,6 +89,31 @@ def test_create_client_from_env_builds_client(monkeypatch):
     assert client.access_token == "token"
     assert client.custom_field_namespace == "domain"
     assert client.community == "ae-dept-data"
+    assert client.allowed_communities == ["ae-dept-data", "future-lab-data"]
+
+
+def test_create_client_from_env_uses_first_allowed_community_as_default(monkeypatch):
+    monkeypatch.setenv("INVENIO_URL", "https://example.org")
+    monkeypatch.setenv("INVENIO_TOKEN", "token")
+    monkeypatch.setenv("INVENIO_COMMUNITIES", "future-lab-data,ae-dept-data")
+    monkeypatch.delenv("INVENIO_COMMUNITY", raising=False)
+
+    client = create_client_from_env()
+
+    assert client.community == "future-lab-data"
+    assert client.allowed_communities == ["future-lab-data", "ae-dept-data"]
+
+
+def test_create_client_from_env_treats_single_community_as_allowlist(monkeypatch):
+    monkeypatch.setenv("INVENIO_URL", "https://example.org")
+    monkeypatch.setenv("INVENIO_TOKEN", "token")
+    monkeypatch.setenv("INVENIO_COMMUNITY", "ae-dept-data")
+    monkeypatch.delenv("INVENIO_COMMUNITIES", raising=False)
+
+    client = create_client_from_env()
+
+    assert client.community == "ae-dept-data"
+    assert client.allowed_communities == ["ae-dept-data"]
 
 
 def test_create_draft_does_not_set_parent_community(valid_metadata: dict):
@@ -107,6 +133,13 @@ def test_create_draft_does_not_set_parent_community(valid_metadata: dict):
 def test_submit_draft_for_review_uses_review_then_submit_endpoints():
     client = InvenioClient("https://example.org", "token", community="ae-dept-data")
 
+    detail_response = Mock(status_code=404)
+    detail_response.raise_for_status = Mock()
+    search_response = Mock(status_code=200)
+    search_response.raise_for_status = Mock()
+    search_response.json.return_value = {
+        "hits": {"hits": [{"id": "comm-123", "slug": "ae-dept-data"}]}
+    }
     review_response = Mock()
     review_response.raise_for_status = Mock()
     review_response.json.return_value = {"id": "req-123"}
@@ -114,6 +147,7 @@ def test_submit_draft_for_review_uses_review_then_submit_endpoints():
     submit_response = Mock()
     submit_response.raise_for_status = Mock()
 
+    client.session.get = Mock(side_effect=[detail_response, search_response])
     client.session.put = Mock(return_value=review_response)
     client.session.post = Mock(return_value=submit_response)
 
@@ -123,7 +157,7 @@ def test_submit_draft_for_review_uses_review_then_submit_endpoints():
     client.session.put.assert_called_once_with(
         "https://example.org/api/records/draft-1/draft/review",
         json={
-            "receiver": {"community": "ae-dept-data"},
+            "receiver": {"community": "comm-123"},
             "type": "community-submission",
         },
     )
@@ -136,6 +170,13 @@ def test_submit_draft_for_review_uses_review_then_submit_endpoints():
 def test_submit_draft_for_review_accepts_optional_comment():
     client = InvenioClient("https://example.org", "token", community="ae-dept-data")
 
+    detail_response = Mock(status_code=404)
+    detail_response.raise_for_status = Mock()
+    search_response = Mock(status_code=200)
+    search_response.raise_for_status = Mock()
+    search_response.json.return_value = {
+        "hits": {"hits": [{"id": "comm-123", "slug": "ae-dept-data"}]}
+    }
     review_response = Mock()
     review_response.raise_for_status = Mock()
     review_response.json.return_value = {"id": "req-456"}
@@ -143,6 +184,7 @@ def test_submit_draft_for_review_accepts_optional_comment():
     submit_response = Mock()
     submit_response.raise_for_status = Mock()
 
+    client.session.get = Mock(side_effect=[detail_response, search_response])
     client.session.put = Mock(return_value=review_response)
     client.session.post = Mock(return_value=submit_response)
 
@@ -163,3 +205,111 @@ def test_submit_draft_for_review_requires_community():
 
     with pytest.raises(ValueError, match="community"):
         client.submit_draft_for_review("draft-3")
+
+
+def test_submit_draft_for_review_accepts_direct_community_id():
+    client = InvenioClient(
+        "https://example.org",
+        "token",
+        community="8ce765f7-2f11-4f47-a740-0d5d4b9d54f0",
+    )
+
+    detail_response = Mock(status_code=200)
+    detail_response.raise_for_status = Mock()
+    detail_response.json.return_value = {
+        "id": "8ce765f7-2f11-4f47-a740-0d5d4b9d54f0"
+    }
+    review_response = Mock()
+    review_response.raise_for_status = Mock()
+    review_response.json.return_value = {"id": "req-789"}
+    submit_response = Mock()
+    submit_response.raise_for_status = Mock()
+
+    client.session.get = Mock(return_value=detail_response)
+    client.session.put = Mock(return_value=review_response)
+    client.session.post = Mock(return_value=submit_response)
+
+    client.submit_draft_for_review("draft-4")
+
+    client.session.get.assert_called_once_with(
+        "https://example.org/api/communities/8ce765f7-2f11-4f47-a740-0d5d4b9d54f0"
+    )
+    client.session.put.assert_called_once_with(
+        "https://example.org/api/records/draft-4/draft/review",
+        json={
+            "receiver": {"community": "8ce765f7-2f11-4f47-a740-0d5d4b9d54f0"},
+            "type": "community-submission",
+        },
+    )
+
+
+def test_submit_draft_for_review_rejects_community_outside_allowlist():
+    client = InvenioClient(
+        "https://example.org",
+        "token",
+        community="ae-dept-data",
+        allowed_communities=["ae-dept-data", "future-lab-data"],
+    )
+    client._resolve_community_id = Mock(
+        side_effect=lambda ref: {
+            "other-community": "comm-999",
+            "ae-dept-data": "comm-123",
+            "future-lab-data": "comm-456",
+        }[ref]
+    )
+
+    with pytest.raises(ValueError, match="configured allowlist"):
+        client.submit_draft_for_review("draft-5", community_id="other-community")
+
+
+def test_submit_draft_for_review_accepts_equivalent_id_with_allowlist():
+    client = InvenioClient(
+        "https://example.org",
+        "token",
+        community="ae-dept-data",
+        allowed_communities=["ae-dept-data"],
+    )
+    client._resolve_community_id = Mock(
+        side_effect=lambda ref: {
+            "comm-123": "comm-123",
+            "ae-dept-data": "comm-123",
+        }[ref]
+    )
+
+    review_response = Mock()
+    review_response.raise_for_status = Mock()
+    review_response.json.return_value = {"id": "req-999"}
+    submit_response = Mock()
+    submit_response.raise_for_status = Mock()
+
+    client.session.put = Mock(return_value=review_response)
+    client.session.post = Mock(return_value=submit_response)
+
+    result = client.submit_draft_for_review("draft-6", community_id="comm-123")
+
+    assert result == {"id": "req-999"}
+    client.session.put.assert_called_once_with(
+        "https://example.org/api/records/draft-6/draft/review",
+        json={
+            "receiver": {"community": "comm-123"},
+            "type": "community-submission",
+        },
+    )
+
+
+def test_resolve_submission_community_rejects_community_outside_allowlist():
+    client = InvenioClient(
+        "https://example.org",
+        "token",
+        community="ae-dept-data",
+        allowed_communities=["ae-dept-data"],
+    )
+    client._resolve_community_id = Mock(
+        side_effect=lambda ref: {
+            "other-community": "comm-999",
+            "ae-dept-data": "comm-123",
+        }[ref]
+    )
+
+    with pytest.raises(ValueError, match="configured allowlist"):
+        client.resolve_submission_community("other-community")

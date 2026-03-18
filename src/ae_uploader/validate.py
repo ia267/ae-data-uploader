@@ -10,6 +10,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
+import re
 
 import jsonschema
 from jsonschema import Draft7Validator, validators
@@ -27,6 +28,49 @@ else:
 class ValidationError(Exception):
     """Custom exception for validation errors."""
     pass
+
+
+_ORCID_PATTERN = re.compile(r"^(?:https?://orcid\.org/)?(\d{4}-\d{4}-\d{4}-\d{3}[\dX])$")
+
+
+def _is_valid_orcid(value: str) -> bool:
+    """Validate an ORCID identifier, including checksum."""
+    match = _ORCID_PATTERN.fullmatch(value.strip())
+    if not match:
+        return False
+
+    digits = match.group(1).replace("-", "")
+    total = 0
+    for char in digits[:-1]:
+        total = (total + int(char)) * 2
+
+    remainder = total % 11
+    result = (12 - remainder) % 11
+    check_digit = "X" if result == 10 else str(result)
+    return digits[-1] == check_digit
+
+
+def _validate_orcid_identifiers(metadata: Dict[str, Any]) -> List[str]:
+    """Validate ORCID identifiers for creators and contributors."""
+    errors = []
+
+    def check_people(collection_name: str) -> None:
+        people = metadata.get(collection_name, [])
+        for person_index, person in enumerate(people):
+            identifiers = person.get("person_or_org", {}).get("identifiers", [])
+            for identifier_index, identifier in enumerate(identifiers):
+                if identifier.get("scheme") != "orcid":
+                    continue
+                if _is_valid_orcid(str(identifier.get("identifier", ""))):
+                    continue
+                errors.append(
+                    f"[{collection_name}.{person_index}.person_or_org.identifiers."
+                    f"{identifier_index}.identifier] Invalid ORCID identifier"
+                )
+
+    check_people("creators")
+    check_people("contributors")
+    return errors
 
 
 def load_schema(schema_name: str = "fluid_dynamics_schema.json") -> Dict[str, Any]:
@@ -96,7 +140,9 @@ def validate_metadata(metadata: Dict[str, Any], schema: Dict[str, Any] = None) -
         # Build a readable error message
         path = ".".join(str(p) for p in error.path) if error.path else "root"
         errors.append(f"[{path}] {error.message}")
-    
+
+    errors.extend(_validate_orcid_identifiers(metadata))
+
     is_valid = len(errors) == 0
     return is_valid, errors
 
@@ -214,7 +260,13 @@ def validate_with_hints(metadata: Dict[str, Any], schema: Dict[str, Any] = None)
             hints.append(
                 "publication_date must be in YYYY-MM-DD format"
             )
-        
+
+        if any("Invalid ORCID identifier" in err for err in errors):
+            hints.append(
+                "ORCID identifiers must use a real ORCID with a valid checksum, "
+                "for example 0000-0002-1825-0097"
+            )
+
         if any("domain" in err for err in errors):
             hints.append(
                 "Domain rules: both disciplines require discipline, study (with field and keywords), and observations"
