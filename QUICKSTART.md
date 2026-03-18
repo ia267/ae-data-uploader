@@ -10,7 +10,7 @@ cd ae-data-uploader
 pip install -e .
 ```
 
-## 1. Configure Credentials
+## Step 1: Configure Credentials (one-time)
 
 ```bash
 ae-upload configure
@@ -19,29 +19,25 @@ ae-upload configure
 This saves credentials to `.env` in your current directory.
 By default uploads target community `ae-dept-data` (stored as `INVENIO_COMMUNITY`).
 
-## 2. Create `metadata.json`
+After this step, you only need to repeat it if your credentials or preferred community changes.
+
+**Note:** The `.env` file is created in your current working directory. To use it from a different directory, either:
+- Navigate to the directory where `.env` is located, or
+- Use `ae-upload upload ./data --env-file /path/to/.env`
+
+## Step 2: Create Metadata (for each dataset)
 
 ```bash
 ae-upload export-form --output metadata_form.html
 # open metadata_form.html in your browser and download metadata.json
 ```
 
-## 3. Validate Metadata
-
-```bash
-ae-upload validate metadata.json
-```
-
-## 4. Upload Data
+## Step 3: Upload Data
 
 ```bash
 ae-upload upload ./your_data_directory
-# use --publish to finalise:
-# - submits for repository review using the default destination
-# - fails only if you explicitly bypass the normal reviewed flow
-# ae-upload upload ./your_data_directory --publish
 ```
 
-Place `metadata.json` in the data directory, or pass it with `--metadata /path/to/metadata.json`.
+Metadata validation happens automatically during upload. Place `metadata.json` in the data directory, or pass it with `--metadata /path/to/metadata.json`.
 
 For advanced options, including custom community targeting, see `USER_DOCS.md`.

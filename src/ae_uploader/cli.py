@@ -661,7 +661,7 @@ def generate(observation_type: str, output: str):
     
     click.echo(f"[OK] Template created: {output_path}")
     click.echo(f"  Edit the file and fill in your dataset details")
-    click.echo(f"  Then validate with: ae-upload validate {output_path}")
+    click.echo(f"  Then upload with: ae-upload upload ./your_data_directory --metadata {output_path}")
 
 
 @cli.command()
@@ -958,13 +958,12 @@ def configure(insecure: bool):
     # Save credentials
     _save_credentials(env_path, url, token, namespace, community, allowed_communities)
     click.echo(f"\n[OK] Credentials saved to {env_path.absolute()}")
-    click.echo("\nNext steps:")
-    click.echo("  ae-upload configure")
+    click.echo("\nFor each new dataset:")
     click.echo("  ae-upload export-form --output metadata_form.html")
     click.echo("  # open metadata_form.html in your browser and download metadata.json")
-    click.echo("  ae-upload validate metadata.json")
-    click.echo("  ae-upload upload ./my_data_directory         # creates draft by default")
-    click.echo("  # ae-upload upload ./my_data_directory --publish")
+    click.echo("  ae-upload upload ./my_data_directory")
+    click.echo("\nTo use this .env file from a different directory:")
+    click.echo(f"  ae-upload upload ./data --env-file {env_path.absolute()}")
 
 
 @cli.command()
