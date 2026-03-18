@@ -19,13 +19,29 @@ pip install -e .
 
 ## Quick Start
 
+**One-time setup:**
 ```bash
 ae-upload configure
+```
+
+**For each new dataset:**
+```bash
 ae-upload export-form --output metadata_form.html
 # open metadata_form.html in your browser and download metadata.json
-ae-upload validate metadata.json
-ae-upload upload ./my_data_directory         # creates draft by default
-# ae-upload upload ./my_data_directory --publish  # submits for review when a community is configured
+ae-upload upload ./my_data_directory
+```
+
+**To publish a dataset after reviewing the draft:**
+```bash
+ae-upload upload ./my_data_directory --publish
+```
+
+After `ae-upload configure`, credentials are saved to `.env` in that directory. The `configure` command only needs to run once.
+Metadata validation happens automatically during upload, so you can skip directly to `ae-upload upload` if metadata already exists.
+
+**Note:** The `.env` file is created in your current working directory. To use credentials from a different directory:
+```bash
+ae-upload upload ./data --env-file /path/to/.env
 ```
 
 `ae-upload configure` stores `INVENIO_COMMUNITY` as the default approved community

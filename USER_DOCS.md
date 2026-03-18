@@ -11,7 +11,15 @@ cd ae-data-uploader
 pip install -e .
 ```
 
-## Configure Credentials
+## Configure Credentials (one-time setup)
+
+Run this once to save your credentials to `.env` in your current directory. After setup, you only need to run it again if your credentials or preferred community changes.
+
+**Important:** The `.env` file is created in your current working directory. To use credentials from a different directory, use the `--env-file` option:
+
+```bash
+ae-upload upload ./data --env-file /path/to/.env
+```
 
 Interactive setup:
 
@@ -41,7 +49,11 @@ Notes:
 - ORCID is optional. If you do not have one, omit `person_or_org.identifiers`.
 - You can also pass credentials on each command with `--url` and `--token`.
 
-## Create Metadata
+## Per-Dataset Workflow
+
+For each new dataset you want to upload:
+
+### Create Metadata
 
 Recommended (web form):
 
@@ -62,20 +74,15 @@ Reference examples:
 - `examples/metadata_numerical_les.json`
 - `examples/metadata_experimental_piv.json`
 
-## Validate Metadata
+### Upload Data
+
+Metadata is automatically validated during upload. You can optionally validate beforehand if needed:
 
 ```bash
 ae-upload validate metadata.json
 ae-upload validate metadata.json --verbose
-```
-
-Use a custom schema when needed:
-
-```bash
 ae-upload validate metadata.json --schema schema.json
 ```
-
-## Upload Data
 
 Directory upload:
 
