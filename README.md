@@ -25,11 +25,14 @@ ae-upload export-form --output metadata_form.html
 # open metadata_form.html in your browser and download metadata.json
 ae-upload validate metadata.json
 ae-upload upload ./my_data_directory         # creates draft by default
-# ae-upload upload ./my_data_directory --publish
+# ae-upload upload ./my_data_directory --publish  # submits for review when a community is configured
 ```
 
 `ae-upload configure` stores `INVENIO_COMMUNITY` (default: `ae-dept-data`).
 Override per upload with `ae-upload upload ... --community <community-id>`.
+`--publish` uses a safe default:
+- with a configured community, submit for community review;
+- without a community, fail unless `--force-direct-publish` is provided.
 
 See `QUICKSTART.md` for the minimal first-run flow.
 

@@ -93,7 +93,9 @@ def cli():
 @click.option('--no-zip', is_flag=True, 
               help='Upload files individually instead of as a zip archive (directories only)')
 @click.option('--draft-only/--publish', default=True,
-              help='Keep record as draft (default) or publish after upload')
+              help='Keep draft (default) or finalise upload (submit review when community is set)')
+@click.option('--force-direct-publish', is_flag=True,
+              help='Allow immediate publish without community when using --publish')
 @click.option('--env-file', type=click.Path(exists=True),
               help='Path to .env file with INVENIO_TOKEN and INVENIO_URL')
 @click.option('--save-credentials', is_flag=True,
@@ -114,6 +116,7 @@ def upload(data_path: str,
            metadata: Optional[str],
            no_zip: bool,
            draft_only: bool,
+           force_direct_publish: bool,
            env_file: Optional[str],
            save_credentials: bool,
            schema: Optional[str],
@@ -135,7 +138,7 @@ def upload(data_path: str,
     2. Validate the metadata against the schema
     3. Create a draft record in Invenio-RDM
     4. Upload the file(s)
-    5. Keep as draft by default (or publish if --publish is provided)
+    5. Keep as draft by default (or finalise if --publish is provided)
     """
     # Load environment file if specified
     if env_file:
@@ -148,6 +151,14 @@ def upload(data_path: str,
         url = os.environ.get('INVENIO_URL')
     if not token:
         token = os.environ.get('INVENIO_TOKEN')
+
+    community = (community or '').strip()
+
+    if not draft_only and not community and not force_direct_publish:
+        click.echo("[ERROR] Refusing direct publish without a configured community.", err=True)
+        click.echo("   Configure INVENIO_COMMUNITY or use --community <community-id>.", err=True)
+        click.echo("   If you intend immediate publication, re-run with --force-direct-publish.", err=True)
+        sys.exit(1)
     
     # Prompt for URL if not provided
     if not url:
@@ -241,7 +252,7 @@ def upload(data_path: str,
     # Load metadata for upload
     metadata_dict = json.loads(metadata_path.read_text())
     
-    # Initialize Invenio client
+    # Initialise Invenio client
     click.echo(f"\n[INFO] Connecting to {url}...")
     client = InvenioClient(url, token, namespace, community)
 
@@ -356,27 +367,45 @@ def upload(data_path: str,
             click.echo(f"[ERROR] Error uploading files: {e}", err=True)
             sys.exit(1)
     
-    # Publish or keep as draft
+    # Finalise or keep as draft
     if draft_only:
         click.echo(f"\n[OK] Draft created successfully!")
         click.echo(f"   View at: {url}/uploads/{draft_id}")
-        click.echo("   Use --publish to publish automatically after upload.")
+        click.echo("   Use --publish to finalise automatically after upload.")
         if auto_index:
             click.echo(f"   ✨ Byte-offset index included for selective downloads")
     else:
-        click.echo("\n[INFO] Publishing record...")
-        try:
-            record = client.publish_draft(draft_id)
-            record_id = record['id']
-            click.echo("[OK] Record published successfully!")
-            click.echo(f"   DOI: {record.get('doi', 'Pending')}")
-            click.echo(f"   View at: {url}/records/{record_id}")
-            if auto_index:
-                click.echo(f"   ✨ Byte-offset index included for selective downloads")
-        except Exception as e:
-            click.echo(f"[ERROR] Error publishing record: {e}", err=True)
-            click.echo(f"   Draft saved at: {url}/uploads/{draft_id}", err=True)
-            sys.exit(1)
+        if community:
+            click.echo("\n[INFO] Submitting draft for community review...")
+            try:
+                review_request = client.submit_draft_for_review(
+                    draft_id,
+                    community_id=community,
+                )
+                click.echo("[OK] Draft submitted for community review!")
+                click.echo(f"   Community: {community}")
+                click.echo(f"   Request ID: {review_request.get('id', 'N/A')}")
+                click.echo(f"   View at: {url}/uploads/{draft_id}")
+                if auto_index:
+                    click.echo(f"   ✨ Byte-offset index included for selective downloads")
+            except Exception as e:
+                click.echo(f"[ERROR] Error submitting for review: {e}", err=True)
+                click.echo(f"   Draft saved at: {url}/uploads/{draft_id}", err=True)
+                sys.exit(1)
+        else:
+            click.echo("\n[INFO] Publishing record...")
+            try:
+                record = client.publish_draft(draft_id)
+                record_id = record['id']
+                click.echo("[OK] Record published successfully!")
+                click.echo(f"   DOI: {record.get('doi', 'Pending')}")
+                click.echo(f"   View at: {url}/records/{record_id}")
+                if auto_index:
+                    click.echo(f"   ✨ Byte-offset index included for selective downloads")
+            except Exception as e:
+                click.echo(f"[ERROR] Error publishing record: {e}", err=True)
+                click.echo(f"   Draft saved at: {url}/uploads/{draft_id}", err=True)
+                sys.exit(1)
 
 
 @cli.command()

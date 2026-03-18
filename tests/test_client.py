@@ -90,7 +90,7 @@ def test_create_client_from_env_builds_client(monkeypatch):
     assert client.community == "ae-dept-data"
 
 
-def test_create_draft_sets_parent_community(valid_metadata: dict):
+def test_create_draft_does_not_set_parent_community(valid_metadata: dict):
     client = InvenioClient("https://example.org", "token", community="ae-dept-data")
 
     response = Mock()
@@ -101,4 +101,65 @@ def test_create_draft_sets_parent_community(valid_metadata: dict):
     client.create_draft(valid_metadata)
 
     _, kwargs = client.session.post.call_args
-    assert kwargs["json"]["parent"] == {"communities": [{"id": "ae-dept-data"}]}
+    assert "parent" not in kwargs["json"]
+
+
+def test_submit_draft_for_review_uses_review_then_submit_endpoints():
+    client = InvenioClient("https://example.org", "token", community="ae-dept-data")
+
+    review_response = Mock()
+    review_response.raise_for_status = Mock()
+    review_response.json.return_value = {"id": "req-123"}
+
+    submit_response = Mock()
+    submit_response.raise_for_status = Mock()
+
+    client.session.put = Mock(return_value=review_response)
+    client.session.post = Mock(return_value=submit_response)
+
+    result = client.submit_draft_for_review("draft-1")
+
+    assert result == {"id": "req-123"}
+    client.session.put.assert_called_once_with(
+        "https://example.org/api/records/draft-1/draft/review",
+        json={
+            "receiver": {"community": "ae-dept-data"},
+            "type": "community-submission",
+        },
+    )
+    client.session.post.assert_called_once_with(
+        "https://example.org/api/records/draft-1/draft/actions/submit-review",
+        json={"require_review": True},
+    )
+
+
+def test_submit_draft_for_review_accepts_optional_comment():
+    client = InvenioClient("https://example.org", "token", community="ae-dept-data")
+
+    review_response = Mock()
+    review_response.raise_for_status = Mock()
+    review_response.json.return_value = {"id": "req-456"}
+
+    submit_response = Mock()
+    submit_response.raise_for_status = Mock()
+
+    client.session.put = Mock(return_value=review_response)
+    client.session.post = Mock(return_value=submit_response)
+
+    client.submit_draft_for_review("draft-2", review_comment="please review")
+
+    _, kwargs = client.session.post.call_args
+    assert kwargs["json"] == {
+        "require_review": True,
+        "payload": {
+            "content": "please review",
+            "format": "html",
+        },
+    }
+
+
+def test_submit_draft_for_review_requires_community():
+    client = InvenioClient("https://example.org", "token", community="")
+
+    with pytest.raises(ValueError, match="community"):
+        client.submit_draft_for_review("draft-3")

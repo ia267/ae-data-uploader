@@ -120,3 +120,28 @@ def test_save_credentials_writes_secure_env_file(tmp_path):
     assert "CUSTOM_FIELD_NAMESPACE=domain" in env_contents
     assert "INVENIO_COMMUNITY=ae-dept-data" in env_contents
     assert env_path.stat().st_mode & 0o777 == 0o600
+
+
+def test_upload_publish_without_community_requires_force(tmp_path):
+    data_file = tmp_path / "data.h5"
+    data_file.write_text("dummy", encoding="utf-8")
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli,
+        [
+            "upload",
+            str(data_file),
+            "--publish",
+            "--community",
+            "",
+            "--url",
+            "https://example.org",
+            "--token",
+            "token",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Refusing direct publish without a configured community" in result.output
+    assert "--force-direct-publish" in result.output

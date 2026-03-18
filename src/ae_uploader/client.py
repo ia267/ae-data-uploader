@@ -26,7 +26,7 @@ class InvenioClient:
         community: str = "ae-dept-data",
     ):
         """
-        Initialize the Invenio client.
+        Initialise the Invenio client.
         
         Args:
             base_url: Base URL of the Invenio-RDM instance (e.g., https://data.ae.ic.ac.uk)
@@ -76,11 +76,6 @@ class InvenioClient:
         # Transform metadata to Invenio format
         invenio_metadata = self._transform_to_invenio_format(metadata)
 
-        if self.community:
-            invenio_metadata["parent"] = {
-                "communities": [{"id": self.community}]
-            }
-        
         url = f"{self.base_url}/api/records"
         
         response = self.session.post(url, json=invenio_metadata)
@@ -114,7 +109,7 @@ class InvenioClient:
         # Start file upload
         url = f"{self.base_url}/api/records/{draft_id}/draft/files"
         
-        # Initialize file
+        # Initialise file
         init_response = self.session.post(
             url,
             json=[{"key": filename}]
@@ -220,6 +215,55 @@ class InvenioClient:
         response.raise_for_status()
         
         return response.json()
+
+    def submit_draft_for_review(
+        self,
+        draft_id: str,
+        community_id: Optional[str] = None,
+        review_comment: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Submit a draft to a community review workflow.
+
+        This performs the same 2-step workflow as the Invenio deposit UI:
+        1) Create/update review draft state via ``PUT /draft/review``
+        2) Submit for review via ``POST /draft/actions/submit-review``
+
+        Args:
+            draft_id: ID of the draft record
+            community_id: Community ID to submit to (defaults to configured client community)
+            review_comment: Optional review comment text
+
+        Returns:
+            Dictionary containing review request information
+
+        Raises:
+            ValueError: If no community is configured/provided
+            RequestException: If API request fails
+        """
+        target_community = (community_id or self.community or "").strip()
+        if not target_community:
+            raise ValueError("A community ID is required to submit for review")
+
+        review_url = f"{self.base_url}/api/records/{draft_id}/draft/review"
+        review_payload = {
+            "receiver": {"community": target_community},
+            "type": "community-submission",
+        }
+        review_response = self.session.put(review_url, json=review_payload)
+        review_response.raise_for_status()
+
+        submit_url = f"{self.base_url}/api/records/{draft_id}/draft/actions/submit-review"
+        submit_payload: Dict[str, Any] = {"require_review": True}
+        if review_comment:
+            submit_payload["payload"] = {
+                "content": review_comment,
+                "format": "html",
+            }
+
+        submit_response = self.session.post(submit_url, json=submit_payload)
+        submit_response.raise_for_status()
+        return review_response.json()
     
     def _transform_to_invenio_format(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """

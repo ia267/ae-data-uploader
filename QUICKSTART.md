@@ -36,7 +36,9 @@ ae-upload validate metadata.json
 
 ```bash
 ae-upload upload ./your_data_directory
-# use --publish to publish immediately
+# use --publish to finalise:
+# - submits for community review when a community is configured
+# - fails without a community unless you add --force-direct-publish
 # ae-upload upload ./your_data_directory --publish
 ```
 

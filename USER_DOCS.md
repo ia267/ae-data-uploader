@@ -75,7 +75,11 @@ Directory upload:
 ae-upload upload ./my_data
 ```
 
-`upload` creates a draft by default. Add `--publish` to publish immediately.
+`upload` creates a draft by default. Add `--publish` to finalise the upload:
+
+- with `INVENIO_COMMUNITY` or `--community`, the draft is submitted for
+  community review;
+- without a community, the command fails unless `--force-direct-publish` is set.
 
 Single file upload:
 
