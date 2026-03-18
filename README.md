@@ -31,13 +31,9 @@ ae-upload export-form --output metadata_form.html
 ae-upload upload ./my_data_directory
 ```
 
-**To publish a dataset after reviewing the draft:**
-```bash
-ae-upload upload ./my_data_directory --publish
-```
-
 After `ae-upload configure`, credentials are saved to `.env` in that directory. The `configure` command only needs to run once.
 Metadata validation happens automatically during upload, so you can skip directly to `ae-upload upload` if metadata already exists.
+After upload, review the draft in the Invenio UI and publish when ready.
 
 **Note:** The `.env` file is created in your current working directory. To use credentials from a different directory:
 ```bash

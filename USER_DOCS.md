@@ -90,8 +90,15 @@ Directory upload:
 ae-upload upload ./my_data
 ```
 
-`upload` creates a draft by default. Add `--publish` to finalise the upload:
+`upload` creates a draft by default. After upload, review the draft in the Invenio UI and publish when ready.
 
+For automated publishing via CLI (optional):
+
+```bash
+ae-upload upload ./my_data --publish
+```
+
+When using `--publish`:
 - with the default configuration, the draft is submitted for review using the
   standard approved destination;
 - when `INVENIO_COMMUNITIES` is set, `--community` must match one of the
