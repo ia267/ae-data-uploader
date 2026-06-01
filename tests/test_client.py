@@ -144,10 +144,22 @@ def test_submit_draft_for_review_uses_review_then_submit_endpoints():
     review_response.raise_for_status = Mock()
     review_response.json.return_value = {"id": "req-123"}
 
+    draft_response = Mock(status_code=200)
+    draft_response.raise_for_status = Mock()
+    draft_response.json.return_value = {"id": "draft-1", "links": {}}
+
     submit_response = Mock()
     submit_response.raise_for_status = Mock()
 
-    client.session.get = Mock(side_effect=[detail_response, search_response])
+    client.session.get = Mock(
+        side_effect=[
+            detail_response,
+            search_response,
+            draft_response,
+            draft_response,
+            draft_response,
+        ]
+    )
     client.session.put = Mock(return_value=review_response)
     client.session.post = Mock(return_value=submit_response)
 
@@ -181,10 +193,22 @@ def test_submit_draft_for_review_accepts_optional_comment():
     review_response.raise_for_status = Mock()
     review_response.json.return_value = {"id": "req-456"}
 
+    draft_response = Mock(status_code=200)
+    draft_response.raise_for_status = Mock()
+    draft_response.json.return_value = {"id": "draft-2", "links": {}}
+
     submit_response = Mock()
     submit_response.raise_for_status = Mock()
 
-    client.session.get = Mock(side_effect=[detail_response, search_response])
+    client.session.get = Mock(
+        side_effect=[
+            detail_response,
+            search_response,
+            draft_response,
+            draft_response,
+            draft_response,
+        ]
+    )
     client.session.put = Mock(return_value=review_response)
     client.session.post = Mock(return_value=submit_response)
 
@@ -219,19 +243,29 @@ def test_submit_draft_for_review_accepts_direct_community_id():
     detail_response.json.return_value = {
         "id": "8ce765f7-2f11-4f47-a740-0d5d4b9d54f0"
     }
+    draft_response = Mock(status_code=200)
+    draft_response.raise_for_status = Mock()
+    draft_response.json.return_value = {"id": "draft-4", "links": {}}
     review_response = Mock()
     review_response.raise_for_status = Mock()
     review_response.json.return_value = {"id": "req-789"}
     submit_response = Mock()
     submit_response.raise_for_status = Mock()
 
-    client.session.get = Mock(return_value=detail_response)
+    client.session.get = Mock(
+        side_effect=[
+            detail_response,
+            draft_response,
+            draft_response,
+            draft_response,
+        ]
+    )
     client.session.put = Mock(return_value=review_response)
     client.session.post = Mock(return_value=submit_response)
 
     client.submit_draft_for_review("draft-4")
 
-    client.session.get.assert_called_once_with(
+    assert client.session.get.call_args_list[0].args[0] == (
         "https://example.org/api/communities/8ce765f7-2f11-4f47-a740-0d5d4b9d54f0"
     )
     client.session.put.assert_called_once_with(
@@ -279,9 +313,15 @@ def test_submit_draft_for_review_accepts_equivalent_id_with_allowlist():
     review_response = Mock()
     review_response.raise_for_status = Mock()
     review_response.json.return_value = {"id": "req-999"}
+
+    draft_response = Mock(status_code=200)
+    draft_response.raise_for_status = Mock()
+    draft_response.json.return_value = {"id": "draft-6", "links": {}}
+
     submit_response = Mock()
     submit_response.raise_for_status = Mock()
 
+    client.session.get = Mock(side_effect=[draft_response, draft_response, draft_response])
     client.session.put = Mock(return_value=review_response)
     client.session.post = Mock(return_value=submit_response)
 
@@ -313,3 +353,35 @@ def test_resolve_submission_community_rejects_community_outside_allowlist():
 
     with pytest.raises(ValueError, match="configured allowlist"):
         client.resolve_submission_community("other-community")
+
+
+def test_get_link_supports_nested_actions_mapping():
+    payload = {
+        "links": {
+            "actions": {
+                "publish": "/api/records/draft-1/draft/actions/publish",
+            }
+        }
+    }
+
+    assert (
+        InvenioClient._get_link(payload, "actions.publish")
+        == "/api/records/draft-1/draft/actions/publish"
+    )
+
+
+def test_get_link_supports_href_link_objects():
+    payload = {
+        "links": {
+            "actions": {
+                "submit_review": {
+                    "href": "/api/records/draft-2/draft/actions/submit-review"
+                }
+            }
+        }
+    }
+
+    assert (
+        InvenioClient._get_link(payload, "actions.submit_review")
+        == "/api/records/draft-2/draft/actions/submit-review"
+    )

@@ -65,6 +65,7 @@ class InvenioClient:
             if community_ref and community_ref not in self.allowed_communities:
                 self.allowed_communities.append(community_ref)
         self._community_id_cache: Dict[str, str] = {}
+        self._draft_cache: Dict[str, Dict[str, Any]] = {}
         self.session = requests.Session()
         self.session.verify = True
         self.session.headers.update({
@@ -106,8 +107,68 @@ class InvenioClient:
         
         response = self.session.post(url, json=invenio_metadata)
         response.raise_for_status()
-        
-        return response.json()
+
+        draft = response.json()
+        self._draft_cache[draft["id"]] = draft
+        return draft
+
+    def _normalise_link(self, url: Optional[str]) -> Optional[str]:
+        """Convert API links into absolute, non-templated URLs."""
+        if not url:
+            return None
+        cleaned = url.split("{", 1)[0]
+        if cleaned.startswith("http://") or cleaned.startswith("https://"):
+            return cleaned
+        if cleaned.startswith("/"):
+            return f"{self.base_url}{cleaned}"
+        return f"{self.base_url}/{cleaned}"
+
+    def _draft_resource(self, draft_id: str, refresh: bool = False) -> Dict[str, Any]:
+        """Return draft payload, preferring cache and falling back to API fetch."""
+        if not refresh and draft_id in self._draft_cache:
+            return self._draft_cache[draft_id]
+
+        url = f"{self.base_url}/api/records/{draft_id}/draft"
+        response = self.session.get(url)
+        response.raise_for_status()
+        draft = response.json()
+        self._draft_cache[draft_id] = draft
+        return draft
+
+    @staticmethod
+    def _link_value(candidate: Any) -> Optional[str]:
+        """Return link URL from either a raw string or an object with href."""
+        if isinstance(candidate, str):
+            return candidate
+        if isinstance(candidate, dict):
+            href = candidate.get("href")
+            if isinstance(href, str):
+                return href
+        return None
+
+    @classmethod
+    def _get_link(cls, payload: Dict[str, Any], *names: str) -> Optional[str]:
+        """Extract the first matching link from payload links."""
+        links = payload.get("links", {})
+        if not isinstance(links, dict):
+            return None
+
+        for name in names:
+            direct = cls._link_value(links.get(name))
+            if direct:
+                return direct
+
+            current: Any = links
+            for part in name.split("."):
+                if not isinstance(current, dict) or part not in current:
+                    current = None
+                    break
+                current = current[part]
+
+            nested = cls._link_value(current)
+            if nested:
+                return nested
+        return None
 
     def _resolve_community_id(self, community_ref: str) -> str:
         """Resolve a community UUID or slug to the canonical community UUID."""
@@ -204,18 +265,38 @@ class InvenioClient:
         if filename is None:
             filename = file_path.name
         
-        # Start file upload
-        url = f"{self.base_url}/api/records/{draft_id}/draft/files"
+        draft = self._draft_resource(draft_id)
+        files_link = self._normalise_link(
+            self._get_link(draft, "files")
+        )
+        if not files_link:
+            files_link = f"{self.base_url}/api/records/{draft_id}/draft/files"
         
         # Initialise file
         init_response = self.session.post(
-            url,
+            files_link,
             json=[{"key": filename}]
         )
         init_response.raise_for_status()
+        init_payload = init_response.json()
+
+        entry = None
+        entries = init_payload.get("entries", [])
+        if entries:
+            entry = entries[0]
+
+        upload_url = None
+        commit_url = None
+        if entry:
+            entry_links = entry.get("links", {})
+            upload_url = self._normalise_link(entry_links.get("content"))
+            commit_url = self._normalise_link(entry_links.get("commit"))
         
-        # Upload file content
-        upload_url = f"{url}/{filename}/content"
+        # Fallback for instances not exposing per-file action links.
+        if not upload_url:
+            upload_url = f"{files_link}/{filename}/content"
+        if not commit_url:
+            commit_url = f"{files_link}/{filename}/commit"
         
         with open(file_path, 'rb') as f:
             upload_response = self.session.put(
@@ -227,8 +308,10 @@ class InvenioClient:
             upload_response.raise_for_status()
         
         # Commit file
-        commit_response = self.session.post(f"{url}/{filename}/commit")
+        commit_response = self.session.post(commit_url)
         commit_response.raise_for_status()
+
+        self._draft_resource(draft_id, refresh=True)
         
         return commit_response.json()
     
@@ -307,10 +390,17 @@ class InvenioClient:
         Raises:
             RequestException: If API request fails
         """
-        url = f"{self.base_url}/api/records/{draft_id}/draft/actions/publish"
+        draft = self._draft_resource(draft_id)
+        url = self._normalise_link(
+            self._get_link(draft, "publish", "actions.publish")
+        )
+        if not url:
+            url = f"{self.base_url}/api/records/{draft_id}/draft/actions/publish"
         
         response = self.session.post(url)
         response.raise_for_status()
+
+        self._draft_cache.pop(draft_id, None)
         
         return response.json()
 
@@ -342,7 +432,13 @@ class InvenioClient:
         """
         resolved_community_id = self.resolve_submission_community(community_id)
 
-        review_url = f"{self.base_url}/api/records/{draft_id}/draft/review"
+        draft = self._draft_resource(draft_id)
+        review_url = self._normalise_link(
+            self._get_link(draft, "review", "actions.review")
+        )
+        if not review_url:
+            review_url = f"{self.base_url}/api/records/{draft_id}/draft/review"
+
         review_payload = {
             "receiver": {"community": resolved_community_id},
             "type": "community-submission",
@@ -350,7 +446,19 @@ class InvenioClient:
         review_response = self.session.put(review_url, json=review_payload)
         review_response.raise_for_status()
 
-        submit_url = f"{self.base_url}/api/records/{draft_id}/draft/actions/submit-review"
+        refreshed_draft = self._draft_resource(draft_id, refresh=True)
+        submit_url = self._normalise_link(
+            self._get_link(
+                refreshed_draft,
+                "submit_review",
+                "submit-review",
+                "actions.submit_review",
+                "actions.submit-review",
+            )
+        )
+        if not submit_url:
+            submit_url = f"{self.base_url}/api/records/{draft_id}/draft/actions/submit-review"
+
         submit_payload: Dict[str, Any] = {"require_review": True}
         if review_comment:
             submit_payload["payload"] = {
@@ -360,6 +468,8 @@ class InvenioClient:
 
         submit_response = self.session.post(submit_url, json=submit_payload)
         submit_response.raise_for_status()
+
+        self._draft_resource(draft_id, refresh=True)
         return review_response.json()
     
     def _transform_to_invenio_format(self, metadata: Dict[str, Any]) -> Dict[str, Any]:

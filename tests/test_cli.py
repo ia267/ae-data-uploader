@@ -105,13 +105,14 @@ def test_configure_command_shows_export_form_next_steps(monkeypatch):
         )
 
     assert result.exit_code == 0
-    assert "Next steps:" in result.output
+    assert "For each new dataset:" in result.output
     assert "ae-upload export-form --output metadata_form.html" in result.output
     assert "# open metadata_form.html in your browser and download metadata.json" in result.output
     assert "alternative: ae-upload generate numerical" not in result.output
-    assert "ae-upload validate metadata.json" in result.output
-    assert "ae-upload upload ./my_data_directory         # creates draft by default" in result.output
-    assert "# ae-upload upload ./my_data_directory --publish" in result.output
+    assert "ae-upload validate metadata.json" not in result.output
+    assert "ae-upload upload ./my_data_directory" in result.output
+    assert "To use this .env file from a different directory:" in result.output
+    assert "ae-upload upload ./data --env-file" in result.output
 
 
 def test_configure_uses_default_community_without_advanced_prompt(monkeypatch):
