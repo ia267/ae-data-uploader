@@ -7,7 +7,7 @@ This module handles all API interactions with Invenio-RDM.
 import os
 import json
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Callable, Dict, Any, List, Optional
 import zipfile
 import tempfile
 
@@ -343,7 +343,36 @@ class InvenioClient:
 
         return result
     
-    def upload_directory(self, draft_id: str, directory: str, create_zip: bool = True) -> List[Dict[str, Any]]:
+    @staticmethod
+    def _is_uploadable_file(file_path: Path, root: Path) -> bool:
+        """Return True for data files that should be uploaded from a directory."""
+        if not file_path.is_file():
+            return False
+
+        relative_path = file_path.relative_to(root)
+        excluded_files = {'metadata.json', '.uploadignore'}
+        if file_path.name in excluded_files:
+            return False
+
+        return not any(part.startswith('.') for part in relative_path.parts)
+
+    @classmethod
+    def uploadable_files(cls, directory: str) -> List[Path]:
+        """List non-hidden data files uploaded from a directory."""
+        dir_path = Path(directory)
+        return sorted(
+            file_path
+            for file_path in dir_path.rglob('*')
+            if cls._is_uploadable_file(file_path, dir_path)
+        )
+
+    def upload_directory(
+        self,
+        draft_id: str,
+        directory: str,
+        create_zip: bool = True,
+        progress_callback: Optional[Callable[[Path, int, int], None]] = None,
+    ) -> List[Dict[str, Any]]:
         """
         Upload all files from a directory to a draft.
         
@@ -351,6 +380,7 @@ class InvenioClient:
             draft_id: ID of the draft record
             directory: Path to directory containing files
             create_zip: If True, creates a single zip file; if False, uploads files individually
+            progress_callback: Optional callback called before each individual file upload
             
         Returns:
             List of dictionaries containing upload information for each file
@@ -367,6 +397,7 @@ class InvenioClient:
         if not dir_path.exists():
             raise FileNotFoundError(f"Directory not found: {directory}")
         
+        files_to_upload = self.uploadable_files(str(dir_path))
         uploaded_files = []
         
         if create_zip:
@@ -375,14 +406,11 @@ class InvenioClient:
                 zip_path = tmp.name
             
             try:
-                # Create zip archive, excluding metadata files
-                excluded_files = {'metadata.json', '.uploadignore'}
                 with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                    for file_path in dir_path.rglob('*'):
-                        if file_path.is_file() and file_path.name not in excluded_files and not file_path.name.startswith('.'):
-                            # Add file with relative path
-                            arcname = file_path.relative_to(dir_path)
-                            zipf.write(file_path, arcname)
+                    for file_path in files_to_upload:
+                        # Add file with relative path
+                        arcname = file_path.relative_to(dir_path)
+                        zipf.write(file_path, arcname)
                 
                 # Upload the zip file
                 zip_filename = f"{dir_path.name}.zip"
@@ -395,13 +423,13 @@ class InvenioClient:
                     os.unlink(zip_path)
         
         else:
-            # Upload files individually
-            # Skip metadata.json and hidden files
-            excluded_files = {'metadata.json', '.uploadignore'}
-            for file_path in dir_path.rglob('*'):
-                if file_path.is_file() and file_path.name not in excluded_files and not file_path.name.startswith('.'):
-                    result = self.upload_file(draft_id, str(file_path))
-                    uploaded_files.append(result)
+            # Upload files individually.
+            total_files = len(files_to_upload)
+            for index, file_path in enumerate(files_to_upload, start=1):
+                if progress_callback:
+                    progress_callback(file_path, index, total_files)
+                result = self.upload_file(draft_id, str(file_path))
+                uploaded_files.append(result)
         
         return uploaded_files
     

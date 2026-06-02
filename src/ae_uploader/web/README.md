@@ -18,7 +18,7 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
    - Observations (numerical or experimental)
    - Optional: Related identifiers, funding, and license
 
-2. **Download JSON**: Click "Download metadata.json"
+2. **Download JSON**: Click "Generate and Download metadata.json"
    - Browser will download the generated file
 
 3. **Save to Data Folder**: Move the downloaded `metadata.json` to your data directory
@@ -43,7 +43,7 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 - **Keyword Normalisation**: Deduplicates common variants (e.g., `high-Re` vs `high Re`)
 - **Single-Place Entry**: Includes key generic Invenio fields (publisher, version, contributors, related identifiers, funding)
 - **Conditional Sections**: File information appears for both numerical and experimental
-- **Real-time Preview**: Form validates as you type
+- **Validation Before Download**: Form highlights validation errors before generating the JSON
 - **Mobile Responsive**: Works on phones and tablets
 - **No Installation**: Pure HTML/CSS/JavaScript, no dependencies
 

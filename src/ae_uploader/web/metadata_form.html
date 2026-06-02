@@ -267,7 +267,7 @@
             font-size: 0.95em;
         }
         .note::before {
-            content: "Warning: ";
+            content: "Note: ";
             font-weight: 700;
         }
         #output {
@@ -284,7 +284,13 @@
         .output-actions {
             display: flex;
             justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
             margin-bottom: 10px;
+        }
+        .copy-status {
+            color: #1f5e1f;
+            font-size: 0.9em;
         }
         pre {
             background: #fff;
@@ -300,6 +306,27 @@
             padding: 15px;
             border-radius: 4px;
             margin-top: 10px;
+        }
+        .next-steps {
+            margin-bottom: 12px;
+        }
+        .next-steps ol {
+            margin: 10px 0 0 20px;
+            padding: 0;
+        }
+        .command-line {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 6px;
+            padding: 8px 10px;
+            background: #fff;
+            border: 1px solid var(--success-line);
+            border-radius: 4px;
+            color: #234823;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
         @media (max-width: 760px) {
             body {
@@ -338,11 +365,11 @@
             <h2>Basic Information</h2>
 
             <label for="title" class="required">Dataset Title</label>
-            <input type="text" id="title" required>
+            <input type="text" id="title" minlength="3" maxlength="255" required>
             <div class="help-text">e.g., "LES Simulation of Contrails Formation"</div>
 
             <label for="description" class="required">Description</label>
-            <textarea id="description" required></textarea>
+            <textarea id="description" minlength="10" required></textarea>
             <div class="help-text">Brief description of your dataset</div>
 
             <label for="publicationDate" class="required">Publication Date</label>
@@ -466,15 +493,17 @@
 
         <div class="button-group form-actions">
             <button type="button" class="btn-secondary" onclick="resetForm()">Reset Form</button>
-            <button type="submit">Download metadata.json</button>
+            <button type="submit">Generate and Download metadata.json</button>
         </div>
     </form>
 
     <div id="output">
         <h2>Generated JSON Metadata</h2>
         <div class="output-actions">
+            <span id="copyStatus" class="copy-status" aria-live="polite"></span>
             <button type="button" onclick="copyToClipboard()">Copy JSON</button>
         </div>
+        <div id="generationStatus" aria-live="polite"></div>
         <pre id="jsonOutput"></pre>
         <button type="button" onclick="downloadJSON()">Download JSON File</button>
     </div>
@@ -889,7 +918,7 @@
                     return;
                 }
 
-                generateJSON();
+                generateJSON(true);
             });
 
             addCreator();
@@ -2253,7 +2282,49 @@
             });
         }
 
-        function generateJSON() {
+        function appendCommandStep(list, label, command) {
+            const item = document.createElement('li');
+            item.textContent = label;
+
+            const commandLine = document.createElement('code');
+            commandLine.className = 'command-line';
+            commandLine.textContent = command;
+            item.appendChild(commandLine);
+            list.appendChild(item);
+        }
+
+        function renderGenerationStatus() {
+            const status = document.getElementById('generationStatus');
+            status.innerHTML = '';
+
+            const panel = document.createElement('div');
+            panel.className = 'success next-steps';
+
+            const heading = document.createElement('strong');
+            heading.textContent = 'metadata.json generated and downloaded.';
+            panel.appendChild(heading);
+
+            const list = document.createElement('ol');
+            appendCommandStep(
+                list,
+                'Put the downloaded file in the same folder as your data:',
+                'mv ~/Downloads/metadata.json /path/to/my_data_directory/'
+            );
+            appendCommandStep(
+                list,
+                'Run the upload from that data folder:',
+                'cd /path/to/my_data_directory && ae-upload upload .'
+            );
+            appendCommandStep(
+                list,
+                'To submit for review immediately after upload:',
+                'ae-upload upload . --publish'
+            );
+            panel.appendChild(list);
+            status.appendChild(panel);
+        }
+
+        function generateJSON(shouldDownload) {
             const creators = collectCreators();
             const contributors = collectContributors();
             const discipline = document.getElementById('discipline').value;
@@ -2335,20 +2406,11 @@
             document.getElementById('output').scrollIntoView({ behavior: 'smooth' });
 
             window.generatedJSON = jsonString;
+            renderGenerationStatus();
 
-            const existingSuccess = document.querySelector('#output .success');
-            if (existingSuccess) {
-                existingSuccess.remove();
+            if (shouldDownload) {
+                downloadJSON();
             }
-
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success';
-            successDiv.textContent = 'metadata.json generated! Save it to your data folder and run: ae-upload upload .';
-            document.getElementById('output').insertBefore(successDiv, document.getElementById('jsonOutput'));
-
-            setTimeout(function() {
-                successDiv.remove();
-            }, 5000);
         }
 
         function resetForm() {
@@ -2376,14 +2438,57 @@
             }
         }
 
+        function showCopyStatus(message) {
+            const copyStatus = document.getElementById('copyStatus');
+            copyStatus.textContent = message;
+            setTimeout(function() {
+                copyStatus.textContent = '';
+            }, 2500);
+        }
+
+        function fallbackCopyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+
+            let copied = false;
+            try {
+                copied = document.execCommand('copy');
+            } catch (error) {
+                copied = false;
+            }
+
+            textarea.remove();
+            return copied;
+        }
+
         function copyToClipboard() {
             const text = document.getElementById('jsonOutput').textContent;
-            navigator.clipboard.writeText(text).then(function() {
-                alert('JSON copied to clipboard!');
-            });
+            if (!text) {
+                return;
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    showCopyStatus('Copied');
+                }, function() {
+                    showCopyStatus(fallbackCopyToClipboard(text) ? 'Copied' : 'Copy failed');
+                });
+                return;
+            }
+
+            showCopyStatus(fallbackCopyToClipboard(text) ? 'Copied' : 'Copy failed');
         }
 
         function downloadJSON() {
+            if (!window.generatedJSON) {
+                return;
+            }
+
             const blob = new Blob([window.generatedJSON], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a');

@@ -151,8 +151,8 @@ def cli():
 @click.option('--metadata', '-m', 
               type=click.Path(exists=True),
               help='Path to metadata.json (default: looks in data_path parent directory)')
-@click.option('--no-zip', is_flag=True, 
-              help='Upload files individually instead of as a zip archive (directories only)')
+@click.option('--zip/--no-zip', 'zip_upload', default=False,
+              help='Upload directories as a single zip archive instead of individual files')
 @click.option('--draft-only/--publish', default=True,
               help='Keep draft (default) or finalise upload (submit review when community is set)')
 @click.option('--force-direct-publish', is_flag=True,
@@ -175,7 +175,7 @@ def upload(data_path: str,
            namespace: str,
            community: Optional[str],
            metadata: Optional[str],
-           no_zip: bool,
+           zip_upload: bool,
            draft_only: bool,
            force_direct_publish: bool,
            env_file: Optional[str],
@@ -189,17 +189,16 @@ def upload(data_path: str,
     
     DATA_PATH can be either a single file or a directory containing multiple files.
     
+    \b
     Examples:
-        ae-upload upload ./data.h5 --metadata metadata.json
-        ae-upload upload ./my_simulation_data --token YOUR_TOKEN --url https://invenio.example.org
-        ae-upload upload ./my_simulation_data --publish
-        
-    The command will:
-    1. Look for metadata.json (in the same directory or specified via --metadata)
-    2. Validate the metadata against the schema
-    3. Create a draft record in Invenio-RDM
-    4. Upload the file(s)
-    5. Keep as draft by default (or finalise if --publish is provided)
+      ae-upload upload ./data.h5 --metadata metadata.json
+      ae-upload upload ./my_simulation_data --token YOUR_TOKEN --url https://invenio.example.org
+      ae-upload upload ./my_simulation_data --publish
+      ae-upload upload ./my_simulation_data --zip
+
+    The command looks for metadata.json, validates it, creates a draft record,
+    uploads the selected file(s), and keeps the record as a draft unless
+    --publish is provided.
     """
     # Load environment file if specified
     if env_file:
@@ -433,21 +432,41 @@ def upload(data_path: str,
     else:
         # Directory upload
         dir_size = _get_directory_size(path)
+        uploadable_files = InvenioClient.uploadable_files(str(path))
+        upload_mode = "single zip archive" if zip_upload else "individual files"
         click.echo(f"\n[INFO] Directory size: {_format_bytes(dir_size)}")
-        
-        # Default to individual file upload (matching legacy script behavior)
-        # Only use zip for very large datasets where it's explicitly beneficial
-        if not no_zip:
-            no_zip = True  # Default to individual files
-        
+        click.echo(f"[INFO] Uploadable files: {len(uploadable_files)}")
+        click.echo(f"[INFO] Upload mode: {upload_mode}")
+        if not uploadable_files:
+            click.echo(
+                "[WARNING] No uploadable files found. metadata.json and hidden files are skipped.",
+                err=True,
+            )
+        elif zip_upload:
+            click.echo("[INFO] Creating zip archive before upload...")
+
         click.echo(f"\n[INFO] Uploading files from {path}...")
         try:
+            def report_upload_progress(file_path: Path, index: int, total: int) -> None:
+                relative_path = file_path.relative_to(path)
+                file_size = _format_bytes(file_path.stat().st_size)
+                upload_name = file_path.name
+                if str(relative_path) == upload_name:
+                    click.echo(f"   [{index}/{total}] Uploading {relative_path} ({file_size})")
+                else:
+                    click.echo(
+                        f"   [{index}/{total}] Uploading {relative_path} as {upload_name} "
+                        f"({file_size})"
+                    )
+
             uploaded = client.upload_directory(
                 draft_id, 
                 str(path),
-                create_zip=not no_zip
+                create_zip=zip_upload,
+                progress_callback=None if zip_upload else report_upload_progress,
             )
-            click.echo(f"[OK] Uploaded {len(uploaded)} file(s)")
+            uploaded_label = "archive" if zip_upload else "file(s)"
+            click.echo(f"[OK] Uploaded {len(uploaded)} {uploaded_label}")
             
             # Upload index if generated and not already in directory
             if auto_index and index_file and index_file.exists():

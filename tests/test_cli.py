@@ -297,3 +297,125 @@ def test_upload_rejects_unapproved_community_before_creating_draft(
     assert result.exit_code == 1
     assert "Invalid target community" in result.output
     assert "configured allowlist" in result.output
+
+
+def test_upload_directory_reports_individual_file_progress(
+    tmp_path, valid_metadata: dict, monkeypatch
+):
+    data_dir = tmp_path / "dataset"
+    nested_dir = data_dir / "nested"
+    nested_dir.mkdir(parents=True)
+    (data_dir / "metadata.json").write_text(json.dumps(valid_metadata), encoding="utf-8")
+    first_file = data_dir / "a.h5"
+    second_file = nested_dir / "b.csv"
+    first_file.write_text("a", encoding="utf-8")
+    second_file.write_text("b", encoding="utf-8")
+
+    upload_args = {}
+
+    class _DummyClient:
+        def __init__(self, *_args, **_kwargs):
+            self.session = type("Session", (), {"verify": True})()
+
+        @staticmethod
+        def uploadable_files(directory):
+            return [first_file, second_file]
+
+        def test_connection(self):
+            return True
+
+        def resolve_submission_community(self, community):
+            return community
+
+        def create_draft(self, _metadata):
+            return {"id": "draft-1"}
+
+        def upload_directory(
+            self, _draft_id, directory, create_zip=True, progress_callback=None
+        ):
+            upload_args["directory"] = directory
+            upload_args["create_zip"] = create_zip
+            files = self.uploadable_files(directory)
+            for index, file_path in enumerate(files, start=1):
+                progress_callback(file_path, index, len(files))
+            return [{"key": file_path.name} for file_path in files]
+
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli,
+        [
+            "upload",
+            str(data_dir),
+            "--url",
+            "https://example.org",
+            "--token",
+            "token",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert upload_args == {"directory": str(data_dir), "create_zip": False}
+    assert "[INFO] Uploadable files: 2" in result.output
+    assert "[INFO] Upload mode: individual files" in result.output
+    assert "[1/2] Uploading a.h5" in result.output
+    assert "[2/2] Uploading nested/b.csv as b.csv" in result.output
+
+
+def test_upload_directory_zip_mode_uses_archive_upload(
+    tmp_path, valid_metadata: dict, monkeypatch
+):
+    data_dir = tmp_path / "dataset"
+    data_dir.mkdir()
+    (data_dir / "metadata.json").write_text(json.dumps(valid_metadata), encoding="utf-8")
+    data_file = data_dir / "a.h5"
+    data_file.write_text("a", encoding="utf-8")
+
+    upload_args = {}
+
+    class _DummyClient:
+        def __init__(self, *_args, **_kwargs):
+            self.session = type("Session", (), {"verify": True})()
+
+        @staticmethod
+        def uploadable_files(_directory):
+            return [data_file]
+
+        def test_connection(self):
+            return True
+
+        def resolve_submission_community(self, community):
+            return community
+
+        def create_draft(self, _metadata):
+            return {"id": "draft-2"}
+
+        def upload_directory(
+            self, _draft_id, _directory, create_zip=True, progress_callback=None
+        ):
+            upload_args["create_zip"] = create_zip
+            upload_args["progress_callback"] = progress_callback
+            return [{"key": "dataset.zip"}]
+
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli,
+        [
+            "upload",
+            str(data_dir),
+            "--zip",
+            "--url",
+            "https://example.org",
+            "--token",
+            "token",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert upload_args == {"create_zip": True, "progress_callback": None}
+    assert "[INFO] Upload mode: single zip archive" in result.output
+    assert "[INFO] Creating zip archive before upload..." in result.output
+    assert "[OK] Uploaded 1 archive" in result.output

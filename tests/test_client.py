@@ -477,3 +477,45 @@ def test_upload_file_skips_commit_when_not_advertised(tmp_path: Path):
 
     assert result == {"key": "sample.h5", "status": "uploaded"}
     assert client.session.post.call_count == 1
+
+
+def test_upload_directory_reports_progress_for_uploadable_files(tmp_path: Path):
+    client = InvenioClient("https://example.org", "token")
+    data_dir = tmp_path / "data"
+    nested_dir = data_dir / "nested"
+    hidden_dir = data_dir / ".hidden"
+    nested_dir.mkdir(parents=True)
+    hidden_dir.mkdir()
+
+    (data_dir / "metadata.json").write_text("{}", encoding="utf-8")
+    (data_dir / ".secret").write_text("skip", encoding="utf-8")
+    (hidden_dir / "hidden.csv").write_text("skip", encoding="utf-8")
+    first_file = data_dir / "a.csv"
+    second_file = nested_dir / "b.h5"
+    first_file.write_text("a", encoding="utf-8")
+    second_file.write_text("b", encoding="utf-8")
+
+    client.upload_file = Mock(side_effect=[
+        {"key": "a.csv", "status": "uploaded"},
+        {"key": "b.h5", "status": "uploaded"},
+    ])
+    progress = []
+
+    result = client.upload_directory(
+        "draft-12",
+        str(data_dir),
+        create_zip=False,
+        progress_callback=lambda file_path, index, total: progress.append(
+            (file_path.relative_to(data_dir).as_posix(), index, total)
+        ),
+    )
+
+    assert result == [
+        {"key": "a.csv", "status": "uploaded"},
+        {"key": "b.h5", "status": "uploaded"},
+    ]
+    assert progress == [("a.csv", 1, 2), ("nested/b.h5", 2, 2)]
+    assert [call.args[1] for call in client.upload_file.call_args_list] == [
+        str(first_file),
+        str(second_file),
+    ]

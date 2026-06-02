@@ -118,7 +118,7 @@ Common options:
 ```bash
 ae-upload upload ./my_data --publish
 ae-upload upload ./my_data --community future-lab-data --publish
-ae-upload upload ./my_data --no-zip
+ae-upload upload ./my_data --zip
 ae-upload upload ./my_data --metadata /path/to/metadata.json
 ae-upload upload ./my_data --schema schema.json
 ae-upload upload ./my_data --auto-index --index-pattern "*.h5"
