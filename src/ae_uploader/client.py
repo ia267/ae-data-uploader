@@ -282,21 +282,41 @@ class InvenioClient:
 
         entry = None
         entries = init_payload.get("entries", [])
-        if entries:
-            entry = entries[0]
+        if isinstance(entries, list) and entries:
+            # Prefer matching by key for multi-file initialisation responses.
+            for candidate in entries:
+                if isinstance(candidate, dict) and candidate.get("key") == filename:
+                    entry = candidate
+                    break
+            if entry is None:
+                entry = entries[0] if isinstance(entries[0], dict) else None
+        elif isinstance(entries, dict):
+            if filename in entries and isinstance(entries[filename], dict):
+                entry = entries[filename]
+            else:
+                for candidate in entries.values():
+                    if isinstance(candidate, dict):
+                        entry = candidate
+                        break
 
         upload_url = None
         commit_url = None
         if entry:
             entry_links = entry.get("links", {})
-            upload_url = self._normalise_link(entry_links.get("content"))
-            commit_url = self._normalise_link(entry_links.get("commit"))
+            upload_url = self._normalise_link(self._link_value(entry_links.get("content")))
+            commit_url = self._normalise_link(self._link_value(entry_links.get("commit")))
+        if not upload_url:
+            upload_url = self._normalise_link(
+                self._get_link(init_payload, "content", "actions.content")
+            )
+        if not commit_url:
+            commit_url = self._normalise_link(
+                self._get_link(init_payload, "commit", "actions.commit")
+            )
         
-        # Fallback for instances not exposing per-file action links.
+        # Fallback upload URL for instances not exposing per-file action links.
         if not upload_url:
             upload_url = f"{files_link}/{filename}/content"
-        if not commit_url:
-            commit_url = f"{files_link}/{filename}/commit"
         
         with open(file_path, 'rb') as f:
             upload_response = self.session.put(
@@ -306,14 +326,22 @@ class InvenioClient:
                 timeout=(30, None)  # 30s connect, unlimited read for large file streaming
             )
             upload_response.raise_for_status()
-        
-        # Commit file
-        commit_response = self.session.post(commit_url)
-        commit_response.raise_for_status()
+
+        # Commit may be optional on some deployments; call it only when the API
+        # advertises an explicit commit action link.
+        if commit_url:
+            commit_response = self.session.post(commit_url)
+            commit_response.raise_for_status()
+            result = commit_response.json()
+        else:
+            result = upload_response.json() if upload_response.content else {
+                "key": filename,
+                "status": "uploaded",
+            }
 
         self._draft_resource(draft_id, refresh=True)
-        
-        return commit_response.json()
+
+        return result
     
     def upload_directory(self, draft_id: str, directory: str, create_zip: bool = True) -> List[Dict[str, Any]]:
         """

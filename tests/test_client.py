@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import pytest
 from unittest.mock import Mock
 
@@ -385,3 +386,94 @@ def test_get_link_supports_href_link_objects():
         InvenioClient._get_link(payload, "actions.submit_review")
         == "/api/records/draft-2/draft/actions/submit-review"
     )
+
+
+def test_upload_file_uses_entry_links_when_entries_is_dict(tmp_path: Path):
+    client = InvenioClient("https://example.org", "token")
+
+    data_file = tmp_path / "data.bin"
+    data_file.write_bytes(b"abc")
+
+    draft_payload = {
+        "id": "draft-10",
+        "links": {"files": "/api/records/draft-10/draft/files"},
+    }
+
+    init_response = Mock()
+    init_response.raise_for_status = Mock()
+    init_response.json.return_value = {
+        "entries": {
+            "data.bin": {
+                "key": "data.bin",
+                "links": {
+                    "content": "/api/records/draft-10/draft/files/data.bin/content",
+                    "commit": "/api/records/draft-10/draft/files/data.bin/commit",
+                },
+            }
+        }
+    }
+
+    upload_response = Mock()
+    upload_response.raise_for_status = Mock()
+    upload_response.content = b"{}"
+    upload_response.json.return_value = {}
+
+    commit_response = Mock()
+    commit_response.raise_for_status = Mock()
+    commit_response.json.return_value = {"key": "data.bin", "status": "completed"}
+
+    client.session.post = Mock(return_value=init_response)
+    client.session.put = Mock(return_value=upload_response)
+    client._draft_resource = Mock(side_effect=[draft_payload, draft_payload])
+
+    # First post() is file initialisation, second is commit.
+    client.session.post.side_effect = [init_response, commit_response]
+
+    result = client.upload_file("draft-10", str(data_file))
+
+    assert result == {"key": "data.bin", "status": "completed"}
+    assert client.session.post.call_args_list[0].args[0] == (
+        "https://example.org/api/records/draft-10/draft/files"
+    )
+    assert client.session.post.call_args_list[1].args[0] == (
+        "https://example.org/api/records/draft-10/draft/files/data.bin/commit"
+    )
+
+
+def test_upload_file_skips_commit_when_not_advertised(tmp_path: Path):
+    client = InvenioClient("https://example.org", "token")
+
+    data_file = tmp_path / "sample.h5"
+    data_file.write_bytes(b"1234")
+
+    draft_payload = {
+        "id": "draft-11",
+        "links": {"files": "/api/records/draft-11/draft/files"},
+    }
+
+    init_response = Mock()
+    init_response.raise_for_status = Mock()
+    init_response.json.return_value = {
+        "entries": [
+            {
+                "key": "sample.h5",
+                "links": {
+                    "content": "/api/records/draft-11/draft/files/sample.h5/content",
+                },
+            }
+        ]
+    }
+
+    upload_response = Mock()
+    upload_response.raise_for_status = Mock()
+    upload_response.content = b"{}"
+    upload_response.json.return_value = {"key": "sample.h5", "status": "uploaded"}
+
+    client._draft_resource = Mock(side_effect=[draft_payload, draft_payload])
+    client.session.post = Mock(return_value=init_response)
+    client.session.put = Mock(return_value=upload_response)
+
+    result = client.upload_file("draft-11", str(data_file))
+
+    assert result == {"key": "sample.h5", "status": "uploaded"}
+    assert client.session.post.call_count == 1
