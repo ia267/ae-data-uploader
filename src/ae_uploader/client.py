@@ -533,7 +533,7 @@ class InvenioClient:
             community_id=community_id,
         )
 
-        refreshed_draft = self._draft_resource(draft_id, refresh=True)
+        refreshed_draft = self._draft_resource(draft_id)
         submit_url = self._normalise_link(
             self._get_link(
                 refreshed_draft,

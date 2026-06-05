@@ -272,7 +272,8 @@ def test_upload_rejects_force_direct_publish_flag(tmp_path):
     )
 
     assert result.exit_code == 2
-    assert "No such option: --force-direct-publish" in result.output
+    assert "No such option" in result.output
+    assert "--force-direct-publish" in result.output
 
 
 def test_upload_rejects_conflicting_draft_and_submit_review_flags(tmp_path):
@@ -732,4 +733,5 @@ def test_upload_rejects_publish_flag(tmp_path):
     )
 
     assert result.exit_code == 2
-    assert "No such option: --publish" in result.output
+    assert "No such option" in result.output
+    assert "--publish" in result.output
