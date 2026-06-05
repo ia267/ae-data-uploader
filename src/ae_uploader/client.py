@@ -460,6 +460,48 @@ class InvenioClient:
         
         return response.json()
 
+    def set_draft_submission_community(
+        self,
+        draft_id: str,
+        community_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Attach a community to a draft without submitting it for review.
+
+        This performs only the first step of Invenio's review workflow by
+        creating/updating the review draft state.
+
+        Args:
+            draft_id: ID of the draft record
+            community_id: Community ID or slug to target
+                (defaults to configured client community)
+
+        Returns:
+            Dictionary containing review draft state information
+
+        Raises:
+            ValueError: If no community is configured/provided
+            RequestException: If API request fails
+        """
+        resolved_community_id = self.resolve_submission_community(community_id)
+
+        draft = self._draft_resource(draft_id)
+        review_url = self._normalise_link(
+            self._get_link(draft, "review", "actions.review")
+        )
+        if not review_url:
+            review_url = f"{self.base_url}/api/records/{draft_id}/draft/review"
+
+        review_payload = {
+            "receiver": {"community": resolved_community_id},
+            "type": "community-submission",
+        }
+        review_response = self.session.put(review_url, json=review_payload)
+        review_response.raise_for_status()
+
+        self._draft_resource(draft_id, refresh=True)
+        return review_response.json()
+
     def submit_draft_for_review(
         self,
         draft_id: str,
@@ -486,21 +528,10 @@ class InvenioClient:
             ValueError: If no community is configured/provided
             RequestException: If API request fails
         """
-        resolved_community_id = self.resolve_submission_community(community_id)
-
-        draft = self._draft_resource(draft_id)
-        review_url = self._normalise_link(
-            self._get_link(draft, "review", "actions.review")
+        review_response = self.set_draft_submission_community(
+            draft_id,
+            community_id=community_id,
         )
-        if not review_url:
-            review_url = f"{self.base_url}/api/records/{draft_id}/draft/review"
-
-        review_payload = {
-            "receiver": {"community": resolved_community_id},
-            "type": "community-submission",
-        }
-        review_response = self.session.put(review_url, json=review_payload)
-        review_response.raise_for_status()
 
         refreshed_draft = self._draft_resource(draft_id, refresh=True)
         submit_url = self._normalise_link(
@@ -526,7 +557,7 @@ class InvenioClient:
         submit_response.raise_for_status()
 
         self._draft_resource(draft_id, refresh=True)
-        return review_response.json()
+        return review_response
     
     def _transform_to_invenio_format(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """

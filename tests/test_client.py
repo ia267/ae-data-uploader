@@ -180,6 +180,48 @@ def test_submit_draft_for_review_uses_review_then_submit_endpoints():
     )
 
 
+def test_set_draft_submission_community_updates_review_state_only():
+    client = InvenioClient("https://example.org", "token", community="ae-dept-data")
+
+    detail_response = Mock(status_code=404)
+    detail_response.raise_for_status = Mock()
+    search_response = Mock(status_code=200)
+    search_response.raise_for_status = Mock()
+    search_response.json.return_value = {
+        "hits": {"hits": [{"id": "comm-123", "slug": "ae-dept-data"}]}
+    }
+    review_response = Mock()
+    review_response.raise_for_status = Mock()
+    review_response.json.return_value = {"id": "req-321"}
+
+    draft_response = Mock(status_code=200)
+    draft_response.raise_for_status = Mock()
+    draft_response.json.return_value = {"id": "draft-1", "links": {}}
+
+    client.session.get = Mock(
+        side_effect=[
+            detail_response,
+            search_response,
+            draft_response,
+            draft_response,
+        ]
+    )
+    client.session.put = Mock(return_value=review_response)
+    client.session.post = Mock()
+
+    result = client.set_draft_submission_community("draft-1")
+
+    assert result == {"id": "req-321"}
+    client.session.put.assert_called_once_with(
+        "https://example.org/api/records/draft-1/draft/review",
+        json={
+            "receiver": {"community": "comm-123"},
+            "type": "community-submission",
+        },
+    )
+    client.session.post.assert_not_called()
+
+
 def test_submit_draft_for_review_accepts_optional_comment():
     client = InvenioClient("https://example.org", "token", community="ae-dept-data")
 

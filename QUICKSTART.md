@@ -38,6 +38,10 @@ ae-upload export-form --output metadata_form.html
 ae-upload upload ./your_data_directory
 ```
 
+Uploads are created as drafts and linked to the default community
+`ae-dept-data`. Open the draft in the Invenio UI, check the files and
+metadata, then submit it for community review when ready.
+
 Metadata validation happens automatically during upload. Place `metadata.json` in the data directory, or pass it with `--metadata /path/to/metadata.json`.
 
 For advanced options, including custom community targeting, see `USER_DOCS.md`.

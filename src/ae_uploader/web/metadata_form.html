@@ -257,6 +257,27 @@
             font-size: 12px;
             padding: 6px 10px;
         }
+        .repeatable-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .repeatable-row {
+            display: grid;
+            grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) auto;
+            gap: 8px;
+            align-items: start;
+        }
+        .variable-row {
+            grid-template-columns: minmax(110px, 0.8fr) minmax(180px, 1.4fr) minmax(90px, 0.7fr) auto;
+        }
+        .repeatable-row input {
+            margin-top: 0;
+        }
+        .repeatable-row button {
+            min-height: 38px;
+        }
         .note {
             background: var(--warning-bg);
             color: #705522;
@@ -350,6 +371,10 @@
                 flex-direction: column;
                 align-items: flex-start;
             }
+            .repeatable-row,
+            .variable-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -415,21 +440,21 @@
                 <label for="field" class="required">Field</label>
                 <select id="field" required></select>
 
-                <label for="subfield">Subfield (select one or more)</label>
+                <label for="subfield">Subfield (optional, select one or more)</label>
                 <select id="subfield" multiple size="6"></select>
                 <div class="help-text">Filtered by discipline and field. Use Ctrl/Cmd for multi-select.</div>
 
                 <label for="otherSubfield" id="otherSubfieldLabel" class="hidden">Other Subfield (comma-separated)</label>
                 <input type="text" id="otherSubfield" class="hidden" placeholder="e.g., wall_transpiration, bonded_joint">
 
-                <label for="regime">Regime (select one or more)</label>
+                <label for="regime">Regime (optional, select one or more)</label>
                 <select id="regime" multiple size="6"></select>
                 <div class="help-text">Choose one or more regimes suggested for the selected field. Use Ctrl/Cmd for multi-select.</div>
 
                 <label for="otherRegime" id="otherRegimeLabel" class="hidden">Other Regime (comma-separated)</label>
                 <input type="text" id="otherRegime" class="hidden" placeholder="e.g., strongly coupled nonlinear">
 
-                <label for="model">Model</label>
+                <label for="model">Model (optional)</label>
                 <input type="text" id="model" placeholder="e.g., Ahmed_body, flat_plate, wing_box">
                 <div class="help-text">Name or type of model/case (use N/A if not applicable)</div>
 
@@ -475,11 +500,11 @@
         </div>
 
         <div class="form-section">
-            <h2>License (Optional)</h2>
+            <h2>License</h2>
 
-            <label for="license">License</label>
-            <select id="license">
-                <option value="">None</option>
+            <label for="license" class="required">License</label>
+            <select id="license" required>
+                <option value="">-- Select --</option>
                 <option value="cc-by-4.0">Creative Commons Attribution 4.0 (CC-BY-4.0)</option>
                 <option value="cc-by-sa-4.0">Creative Commons Attribution-ShareAlike 4.0 (CC-BY-SA-4.0)</option>
                 <option value="cc0-1.0">Creative Commons Zero 1.0 (CC0-1.0)</option>
@@ -1601,6 +1626,62 @@
             });
         }
 
+        function operatingConditionRowTemplate() {
+            return '' +
+                '<div class="repeatable-row operating-condition-row">' +
+                '  <input type="text" class="operating-key" aria-label="Operating condition key" placeholder="Key, e.g., Mach">' +
+                '  <input type="text" class="operating-value" aria-label="Operating condition value" placeholder="Value, e.g., 0.7">' +
+                '  <button type="button" class="btn-small btn-danger remove-operating-condition">Remove</button>' +
+                '</div>';
+        }
+
+        function addOperatingConditionRow(card, initialData) {
+            const container = card.querySelector('.obs-operating-conditions');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = operatingConditionRowTemplate();
+            const row = wrapper.firstChild;
+
+            if (initialData) {
+                row.querySelector('.operating-key').value = initialData.key || '';
+                row.querySelector('.operating-value').value = initialData.value || '';
+            }
+
+            row.querySelector('.remove-operating-condition').addEventListener('click', function() {
+                row.remove();
+            });
+
+            container.appendChild(row);
+        }
+
+        function variableRowTemplate() {
+            return '' +
+                '<div class="repeatable-row variable-row">' +
+                '  <input type="text" class="variable-name" aria-label="Variable name" placeholder="Variable name, e.g., u">' +
+                '  <input type="text" class="variable-description" aria-label="Variable description" placeholder="Description, e.g., streamwise velocity">' +
+                '  <input type="text" class="variable-units" aria-label="Variable units" placeholder="Units, e.g., m/s">' +
+                '  <button type="button" class="btn-small btn-danger remove-variable-row">Remove</button>' +
+                '</div>';
+        }
+
+        function addVariableRow(card, initialData) {
+            const container = card.querySelector('.obs-variables-table');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = variableRowTemplate();
+            const row = wrapper.firstChild;
+
+            if (initialData) {
+                row.querySelector('.variable-name').value = initialData.name || '';
+                row.querySelector('.variable-description').value = initialData.description || '';
+                row.querySelector('.variable-units').value = initialData.units || '';
+            }
+
+            row.querySelector('.remove-variable-row').addEventListener('click', function() {
+                row.remove();
+            });
+
+            container.appendChild(row);
+        }
+
         function observationCardTemplate(cardId) {
             return '' +
                 '<div class="card observation-card" data-card-id="' + cardId + '">' +
@@ -1619,37 +1700,42 @@
                 '  <div class="help-text obs-facility-help">Set by observation type.</div>' +
                 '  <label class="hidden obs-other-facility-label">Other Code/Facility Name</label>' +
                 '  <input type="text" class="hidden obs-other-facility" placeholder="e.g., custom in-house setup">' +
-                '  <label>Methods (select one or more)</label>' +
+                '  <label>Methods (optional, select one or more)</label>' +
                 '  <select class="obs-methods" multiple size="8"></select>' +
                 '  <div class="help-text">Filtered by discipline, field, and observation type.</div>' +
                 '  <label class="hidden obs-other-methods-label">Other Methods (comma-separated)</label>' +
                 '  <input type="text" class="hidden obs-other-methods" placeholder="e.g., custom_method">' +
-                '  <label>Data Acquisition Settings</label>' +
+                '  <label>Data Acquisition Settings (optional)</label>' +
                 '  <select class="obs-data-acquisition"></select>' +
-                '  <h4>Operating Conditions</h4>' +
-                '  <div class="help-text">Enter one key:value pair per line.</div>' +
-                '  <textarea class="obs-operating-conditions" rows="5" placeholder="Mach: 0.7\nRe: 1e6"></textarea>' +
+                '  <h4>Operating Conditions (Optional)</h4>' +
                 '  <div class="help-text obs-operating-hint">Example keys are updated from observation type.</div>' +
+                '  <div class="repeatable-list obs-operating-conditions"></div>' +
+                '  <div class="button-group">' +
+                '    <button type="button" class="btn-small btn-secondary add-operating-condition">Add Operating Condition</button>' +
+                '  </div>' +
                 '  <label class="required">Observed Quantities (select one or more)</label>' +
                 '  <select class="obs-observed-quantities" multiple size="8" required></select>' +
                 '  <div class="help-text">Filtered by discipline, field, and observation type.</div>' +
                 '  <label class="hidden obs-other-observed-label">Other Observed Quantities (comma-separated)</label>' +
                 '  <input type="text" class="hidden obs-other-observed" placeholder="e.g., scalar_dissipation_rate">' +
-                '  <label>Model Description</label>' +
+                '  <label>Model Description (optional)</label>' +
                 '  <textarea class="obs-model-description" placeholder="e.g., setup summary"></textarea>' +
-                '  <label>Coordinate System</label>' +
+                '  <label>Coordinate System (optional)</label>' +
                 '  <input type="text" class="obs-coordinate-system" placeholder="e.g., X streamwise, Y wall-normal, Z spanwise">' +
                 '  <h4>File Metadata (Optional)</h4>' +
-                '  <label>File Name Pattern</label>' +
+                '  <label>File Name Pattern (optional)</label>' +
                 '  <input type="text" class="obs-file-name" placeholder="e.g., solution_*.vtk">' +
-                '  <label>File Type</label>' +
+                '  <label>File Type (optional)</label>' +
                 '  <input type="text" class="obs-file-type" placeholder="e.g., hdf5, vtk, csv, dat">' +
-                '  <label>Multiple Files Rule</label>' +
+                '  <label>Multiple Files Rule (optional)</label>' +
                 '  <input type="text" class="obs-multiple-files-rule" placeholder="e.g., timestep number">' +
                 '  <label>Variables in Files</label>' +
-                '  <div class="help-text">Format: variable_name | description | units (one per line)</div>' +
-                '  <textarea class="obs-variables-table" rows="6" placeholder="u | streamwise velocity | m/s\np | pressure | Pa"></textarea>' +
-                '  <label>File Description</label>' +
+                '  <div class="help-text">Required if you fill in any file metadata. Add one row per variable.</div>' +
+                '  <div class="repeatable-list obs-variables-table"></div>' +
+                '  <div class="button-group">' +
+                '    <button type="button" class="btn-small btn-secondary add-variable-row">Add Variable</button>' +
+                '  </div>' +
+                '  <label>File Description (optional)</label>' +
                 '  <textarea class="obs-file-description" placeholder="e.g., one file per timestep"></textarea>' +
                 '</div>';
         }
@@ -1694,11 +1780,45 @@
                 );
             });
 
+            card.querySelector('.add-operating-condition').addEventListener('click', function() {
+                addOperatingConditionRow(card);
+            });
+
+            card.querySelector('.add-variable-row').addEventListener('click', function() {
+                addVariableRow(card);
+            });
+
             observationContainer.appendChild(card);
 
             if (initialData) {
                 card.querySelector('.obs-type').value = initialData.observation_type || '';
                 card.dataset.initialFacility = initialData.facility || '';
+            }
+
+            if (initialData && initialData.operating_conditions) {
+                Object.keys(initialData.operating_conditions).forEach(function(key) {
+                    addOperatingConditionRow(card, {
+                        key: key,
+                        value: String(initialData.operating_conditions[key])
+                    });
+                });
+            }
+            if (card.querySelectorAll('.operating-condition-row').length === 0) {
+                addOperatingConditionRow(card);
+            }
+
+            if (initialData && initialData.files && initialData.files[0]) {
+                const initialFile = initialData.files[0];
+                (initialFile.variables || []).forEach(function(variableName) {
+                    addVariableRow(card, {
+                        name: variableName,
+                        description: (initialFile.variable_description || {})[variableName] || '',
+                        units: (initialFile.variable_units || {})[variableName] || ''
+                    });
+                });
+            }
+            if (card.querySelectorAll('.variable-row').length === 0) {
+                addVariableRow(card);
             }
 
             refreshObservationCard(card);
@@ -1759,7 +1879,6 @@
                 card.querySelector('.obs-facility-label').textContent = 'Code or Facility Name';
                 card.querySelector('.obs-facility-help').textContent = 'Select observation type to constrain options.';
                 otherFacilityInput.placeholder = 'e.g., Nektar++, wind tunnel, structures lab';
-                card.querySelector('.obs-operating-conditions').placeholder = 'Parameter: value';
                 card.querySelector('.obs-operating-hint').textContent = 'Select observation type for suggested keys.';
 
                 toggleOtherInput(facilityElement, otherFacilityLabel, otherFacilityInput);
@@ -1790,7 +1909,6 @@
             card.querySelector('.obs-facility-label').textContent = observationConfig.facilityLabel;
             card.querySelector('.obs-facility-help').textContent = observationConfig.facilityHelp;
             otherFacilityInput.placeholder = observationConfig.facilityPlaceholder;
-            card.querySelector('.obs-operating-conditions').placeholder = observationConfig.operatingTemplate;
             card.querySelector('.obs-operating-hint').textContent =
                 'Suggested keys: ' + observationConfig.operatingTemplate.split('\n').map(function(line) {
                     return line.split(':')[0];
@@ -1814,64 +1932,72 @@
             toggleOtherInput(observedQuantitiesElement, card.querySelector('.obs-other-observed-label'), card.querySelector('.obs-other-observed'));
         }
 
-        function parseOperatingConditions(text) {
+        function parseOperatingConditions(container) {
             const conditions = {};
             const errors = [];
             const numericPattern = /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/;
+            let hasAnyInput = false;
 
-            text.split('\n').forEach(function(rawLine, index) {
-                const line = rawLine.trim();
-                if (!line) {
+            Array.from(container.querySelectorAll('.operating-condition-row')).forEach(function(row, index) {
+                const keyInput = row.querySelector('.operating-key');
+                const valueInput = row.querySelector('.operating-value');
+                const key = keyInput.value.trim();
+                const value = valueInput.value.trim();
+
+                if (!key && !value) {
                     return;
                 }
 
-                const colonIndex = line.indexOf(':');
-                if (colonIndex <= 0 || colonIndex >= line.length - 1) {
-                    errors.push('line ' + (index + 1) + ' must follow "key: value".');
-                    return;
-                }
-
-                const key = line.substring(0, colonIndex).trim();
-                const value = line.substring(colonIndex + 1).trim();
+                hasAnyInput = true;
 
                 if (!key || !value) {
-                    errors.push('line ' + (index + 1) + ' has an empty key or value.');
+                    errors.push('row ' + (index + 1) + ' needs both key and value.');
+                    if (!key) keyInput.classList.add('invalid');
+                    if (!value) valueInput.classList.add('invalid');
                     return;
                 }
 
                 conditions[key] = numericPattern.test(value) ? Number(value) : value;
             });
 
-            return { conditions: conditions, errors: errors };
+            return { conditions: conditions, errors: errors, hasAnyInput: hasAnyInput };
         }
 
-        function parseVariablesTable(text) {
+        function parseVariablesTable(container) {
             const variables = [];
             const variableDescription = {};
             const variableUnits = {};
             const errors = [];
+            let hasAnyInput = false;
 
-            text.split('\n').forEach(function(rawLine, index) {
-                const line = rawLine.trim();
-                if (!line) {
+            Array.from(container.querySelectorAll('.variable-row')).forEach(function(row, index) {
+                const nameInput = row.querySelector('.variable-name');
+                const descriptionInput = row.querySelector('.variable-description');
+                const unitsInput = row.querySelector('.variable-units');
+                const variableName = nameInput.value.trim();
+                const description = descriptionInput.value.trim();
+                const units = unitsInput.value.trim();
+
+                if (!variableName && !description && !units) {
                     return;
                 }
 
-                const parts = line.split('|').map(function(part) { return part.trim(); });
-                if (!parts[0]) {
-                    errors.push('line ' + (index + 1) + ' is missing variable name.');
+                hasAnyInput = true;
+
+                if (!variableName) {
+                    errors.push('row ' + (index + 1) + ' is missing variable name.');
+                    nameInput.classList.add('invalid');
                     return;
                 }
 
-                const variableName = parts[0];
                 variables.push(variableName);
 
-                if (parts[1]) {
-                    variableDescription[variableName] = parts[1];
+                if (description) {
+                    variableDescription[variableName] = description;
                 }
 
-                if (parts[2]) {
-                    variableUnits[variableName] = parts[2];
+                if (units) {
+                    variableUnits[variableName] = units;
                 }
             });
 
@@ -1879,7 +2005,8 @@
                 variables: uniqueList(variables),
                 variableDescription: variableDescription,
                 variableUnits: variableUnits,
-                errors: errors
+                errors: errors,
+                hasAnyInput: hasAnyInput
             };
         }
 
@@ -2024,7 +2151,7 @@
                 const otherMethodsInput = card.querySelector('.obs-other-methods');
                 const observedElement = card.querySelector('.obs-observed-quantities');
                 const otherObservedInput = card.querySelector('.obs-other-observed');
-                const operatingElement = card.querySelector('.obs-operating-conditions');
+                const operatingContainer = card.querySelector('.obs-operating-conditions');
 
                 if (!typeElement.value) {
                     errors.push('Observation ' + (index + 1) + ': observation type is required.');
@@ -2057,34 +2184,42 @@
                     otherObservedInput.classList.add('invalid');
                 }
 
-                const parsedOperating = parseOperatingConditions(operatingElement.value);
+                const parsedOperating = parseOperatingConditions(operatingContainer);
                 if (parsedOperating.errors.length > 0) {
                     parsedOperating.errors.forEach(function(error) {
                         errors.push('Observation ' + (index + 1) + ' operating conditions: ' + error);
                     });
-                    operatingElement.classList.add('invalid');
                 }
 
                 const fileName = card.querySelector('.obs-file-name').value.trim();
                 const fileType = card.querySelector('.obs-file-type').value.trim();
                 const multipleFilesRule = card.querySelector('.obs-multiple-files-rule').value.trim();
                 const fileDescription = card.querySelector('.obs-file-description').value.trim();
-                const variablesRaw = card.querySelector('.obs-variables-table').value.trim();
+                const variablesContainer = card.querySelector('.obs-variables-table');
+                const parsedVariables = parseVariablesTable(variablesContainer);
 
-                const hasAnyFileField = Boolean(fileName || fileType || multipleFilesRule || fileDescription || variablesRaw);
+                const hasAnyFileField = Boolean(
+                    fileName ||
+                    fileType ||
+                    multipleFilesRule ||
+                    fileDescription ||
+                    parsedVariables.hasAnyInput
+                );
                 if (hasAnyFileField) {
-                    const parsedVariables = parseVariablesTable(variablesRaw);
-
                     if (parsedVariables.variables.length === 0) {
                         errors.push('Observation ' + (index + 1) + ': add at least one variable in "Variables in Files" when file metadata is provided.');
-                        card.querySelector('.obs-variables-table').classList.add('invalid');
+                        variablesContainer.classList.add('invalid');
+                        const firstVariableNameInput = variablesContainer.querySelector('.variable-name');
+                        if (firstVariableNameInput) {
+                            firstVariableNameInput.classList.add('invalid');
+                        }
                     }
 
                     if (parsedVariables.errors.length > 0) {
                         parsedVariables.errors.forEach(function(error) {
                             errors.push('Observation ' + (index + 1) + ' variables: ' + error);
                         });
-                        card.querySelector('.obs-variables-table').classList.add('invalid');
+                        variablesContainer.classList.add('invalid');
                     }
                 }
             });
@@ -2229,12 +2364,9 @@
                     observation.data_acquisition_settings = dataAcquisition;
                 }
 
-                const operatingRaw = card.querySelector('.obs-operating-conditions').value;
-                if (operatingRaw.trim()) {
-                    const parsedOperating = parseOperatingConditions(operatingRaw);
-                    if (Object.keys(parsedOperating.conditions).length) {
-                        observation.operating_conditions = parsedOperating.conditions;
-                    }
+                const parsedOperating = parseOperatingConditions(card.querySelector('.obs-operating-conditions'));
+                if (Object.keys(parsedOperating.conditions).length) {
+                    observation.operating_conditions = parsedOperating.conditions;
                 }
 
                 const modelDescription = card.querySelector('.obs-model-description').value.trim();
@@ -2251,16 +2383,15 @@
                 const fileType = card.querySelector('.obs-file-type').value.trim();
                 const multipleFilesRule = card.querySelector('.obs-multiple-files-rule').value.trim();
                 const fileDescription = card.querySelector('.obs-file-description').value.trim();
-                const variablesRaw = card.querySelector('.obs-variables-table').value.trim();
+                const parsedVariables = parseVariablesTable(card.querySelector('.obs-variables-table'));
 
-                if (fileName || fileType || multipleFilesRule || fileDescription || variablesRaw) {
+                if (fileName || fileType || multipleFilesRule || fileDescription || parsedVariables.hasAnyInput) {
                     const fileMetadata = {};
 
                     if (fileName) fileMetadata.file_name = fileName;
                     if (fileType) fileMetadata.file_type = fileType;
                     if (multipleFilesRule) fileMetadata.multiple_files_rule = multipleFilesRule;
 
-                    const parsedVariables = parseVariablesTable(variablesRaw);
                     if (parsedVariables.variables.length) {
                         fileMetadata.variables = parsedVariables.variables;
                     }
@@ -2312,13 +2443,13 @@
             );
             appendCommandStep(
                 list,
-                'Run the upload from that data folder:',
-                'cd /path/to/my_data_directory && ae-upload upload .'
+                'Run upload from the directory that contains your .env file:',
+                'ae-upload upload /path/to/my_data_directory'
             );
             appendCommandStep(
                 list,
-                'To submit for review immediately after upload:',
-                'ae-upload upload . --publish'
+                'Or, from the data folder, point to the .env file explicitly:',
+                'cd /path/to/my_data_directory && ae-upload upload . --env-file /path/to/.env'
             );
             panel.appendChild(list);
             status.appendChild(panel);

@@ -74,6 +74,31 @@ def _format_exception(exc: Exception) -> str:
     return str(exc)
 
 
+def _is_auth_http_error(exc: Exception) -> bool:
+    """Return True for HTTP errors that usually mean missing/invalid permissions."""
+    return (
+        isinstance(exc, requests.exceptions.HTTPError)
+        and exc.response is not None
+        and exc.response.status_code in {401, 403}
+    )
+
+
+def _echo_draft_auth_hints(url: str) -> None:
+    click.echo("[HINT] Draft creation was refused by the server.", err=True)
+    click.echo(
+        "   Check that ae-upload loaded the .env file with the token for this Invenio instance.",
+        err=True,
+    )
+    click.echo(
+        "   Run from the directory containing .env, or pass --env-file /path/to/.env.",
+        err=True,
+    )
+    click.echo(
+        f"   If needed, create a fresh token with deposit:write at {url}/account/settings/applications/tokens/new/",
+        err=True,
+    )
+
+
 def _configured_communities_from_env() -> List[str]:
     """Read the optional community allowlist from the environment."""
     communities = parse_community_list(os.environ.get("INVENIO_COMMUNITIES"))
@@ -153,10 +178,10 @@ def cli():
               help='Path to metadata.json (default: looks in data_path parent directory)')
 @click.option('--zip/--no-zip', 'zip_upload', default=False,
               help='Upload directories as a single zip archive instead of individual files')
-@click.option('--draft-only/--publish', default=True,
-              help='Keep draft (default) or finalise upload (submit review when community is set)')
-@click.option('--force-direct-publish', is_flag=True,
-              help='Allow immediate publish without community when using --publish')
+@click.option('--draft-only', 'draft_only_requested', is_flag=True,
+              help='Keep as editable draft after upload. This is the default.')
+@click.option('--submit-review', is_flag=True,
+              help='Advanced: submit the uploaded draft for community review after upload.')
 @click.option('--env-file', type=click.Path(exists=True),
               help='Path to .env file with INVENIO_TOKEN and INVENIO_URL')
 @click.option('--save-credentials', is_flag=True,
@@ -176,8 +201,8 @@ def upload(data_path: str,
            community: Optional[str],
            metadata: Optional[str],
            zip_upload: bool,
-           draft_only: bool,
-           force_direct_publish: bool,
+           draft_only_requested: bool,
+           submit_review: bool,
            env_file: Optional[str],
            save_credentials: bool,
            schema: Optional[str],
@@ -193,18 +218,17 @@ def upload(data_path: str,
     Examples:
       ae-upload upload ./data.h5 --metadata metadata.json
       ae-upload upload ./my_simulation_data --token YOUR_TOKEN --url https://invenio.example.org
-      ae-upload upload ./my_simulation_data --publish
       ae-upload upload ./my_simulation_data --zip
 
     The command looks for metadata.json, validates it, creates a draft record,
-    uploads the selected file(s), and keeps the record as a draft unless
-    --publish is provided.
+    uploads the selected file(s), and keeps the record as a draft by default.
     """
-    # Load environment file if specified
-    if env_file:
-        load_dotenv(env_file)
-    else:
-        load_dotenv()  # Load from .env in current directory if it exists
+    # Load credentials from an explicit file, or from .env in the user's current
+    # working directory. Passing a path avoids python-dotenv searching relative
+    # to the installed package instead of the shell cwd.
+    dotenv_path = Path(env_file) if env_file else Path.cwd() / ".env"
+    if dotenv_path.exists():
+        load_dotenv(dotenv_path)
     
     # Check for required credentials - try env vars first, then prompt
     if not url:
@@ -230,10 +254,16 @@ def upload(data_path: str,
         )
         sys.exit(1)
 
-    if not draft_only and not community and not force_direct_publish:
-        click.echo("[ERROR] Refusing direct publish without a configured community.", err=True)
+    if draft_only_requested and submit_review:
+        click.echo("[ERROR] Choose either --draft-only or --submit-review, not both.", err=True)
+        sys.exit(1)
+
+    draft_only = not submit_review
+
+    if submit_review and not community:
+        click.echo("[ERROR] Cannot submit for review without a configured community.", err=True)
+        click.echo("   Direct publish without review is disabled.", err=True)
         click.echo("   Configure INVENIO_COMMUNITY or use --community <community-id-or-slug>.", err=True)
-        click.echo("   If you intend immediate publication, re-run with --force-direct-publish.", err=True)
         sys.exit(1)
     
     # Prompt for URL if not provided
@@ -367,7 +397,9 @@ def upload(data_path: str,
         draft_id = draft['id']
         click.echo(f"[OK] Draft created with ID: {draft_id}")
     except Exception as e:
-        click.echo(f"[ERROR] Error creating draft: {e}", err=True)
+        click.echo(f"[ERROR] Error creating draft: {_format_exception(e)}", err=True)
+        if _is_auth_http_error(e):
+            _echo_draft_auth_hints(url)
         sys.exit(1)
     
     # Generate index if requested
@@ -479,48 +511,54 @@ def upload(data_path: str,
             click.echo(f"[ERROR] Error uploading files: {e}", err=True)
             sys.exit(1)
     
-    # Finalise or keep as draft
-    if draft_only:
-        click.echo(f"\n[OK] Draft created successfully!")
-        click.echo(f"   View at: {url}/uploads/{draft_id}")
-        click.echo("   Use --publish to finalise automatically after upload.")
-        if auto_index:
-            click.echo(f"   ✨ Byte-offset index included for selective downloads")
-    else:
-        if community:
-            click.echo("\n[INFO] Submitting draft for community review...")
-            try:
-                review_request = client.submit_draft_for_review(
+    # Pre-select community on draft so users can continue in UI without
+    # manually choosing the community later.
+    if draft_only and community:
+        click.echo("\n[INFO] Setting draft community...")
+        try:
+            if hasattr(client, "set_draft_submission_community"):
+                client.set_draft_submission_community(
                     draft_id,
                     community_id=community,
                 )
-                click.echo("[OK] Draft submitted for community review!")
-                click.echo(f"   Community: {community}")
-                click.echo(f"   Request ID: {review_request.get('id', 'N/A')}")
-                click.echo(f"   View at: {url}/uploads/{draft_id}")
-                if auto_index:
-                    click.echo(f"   ✨ Byte-offset index included for selective downloads")
-            except Exception as e:
-                click.echo(
-                    f"[ERROR] Error submitting for review: {_format_exception(e)}",
-                    err=True,
-                )
-                click.echo(f"   Draft saved at: {url}/uploads/{draft_id}", err=True)
-                sys.exit(1)
-        else:
-            click.echo("\n[INFO] Publishing record...")
-            try:
-                record = client.publish_draft(draft_id)
-                record_id = record['id']
-                click.echo("[OK] Record published successfully!")
-                click.echo(f"   DOI: {record.get('doi', 'Pending')}")
-                click.echo(f"   View at: {url}/records/{record_id}")
-                if auto_index:
-                    click.echo(f"   ✨ Byte-offset index included for selective downloads")
-            except Exception as e:
-                click.echo(f"[ERROR] Error publishing record: {e}", err=True)
-                click.echo(f"   Draft saved at: {url}/uploads/{draft_id}", err=True)
-                sys.exit(1)
+                click.echo(f"[OK] Draft linked to community: {community}")
+        except Exception as e:
+            click.echo(
+                f"[WARNING] Could not pre-select draft community: {_format_exception(e)}",
+                err=True,
+            )
+            click.echo(
+                "          You can still choose the community manually in the UI.",
+                err=True,
+            )
+
+    # Submit for review now, or keep as an editable draft with the community set.
+    if draft_only:
+        click.echo(f"\n[OK] Draft created successfully!")
+        click.echo(f"   View at: {url}/uploads/{draft_id}")
+        click.echo("   Review the draft in the UI, then submit it for community review when ready.")
+        if auto_index:
+            click.echo(f"   ✨ Byte-offset index included for selective downloads")
+    else:
+        click.echo("\n[INFO] Submitting draft for community review...")
+        try:
+            review_request = client.submit_draft_for_review(
+                draft_id,
+                community_id=community,
+            )
+            click.echo("[OK] Draft submitted for community review!")
+            click.echo(f"   Community: {community}")
+            click.echo(f"   Request ID: {review_request.get('id', 'N/A')}")
+            click.echo(f"   View at: {url}/uploads/{draft_id}")
+            if auto_index:
+                click.echo(f"   ✨ Byte-offset index included for selective downloads")
+        except Exception as e:
+            click.echo(
+                f"[ERROR] Error submitting for review: {_format_exception(e)}",
+                err=True,
+            )
+            click.echo(f"   Draft saved at: {url}/uploads/{draft_id}", err=True)
+            sys.exit(1)
 
 
 @cli.command()

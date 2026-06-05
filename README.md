@@ -33,7 +33,7 @@ ae-upload upload ./my_data_directory
 
 After `ae-upload configure`, credentials are saved to `.env` in that directory. The `configure` command only needs to run once.
 Metadata validation happens automatically during upload, so you can skip directly to `ae-upload upload` if metadata already exists.
-After upload, review the draft in the Invenio UI and publish when ready.
+After upload, review the draft in the Invenio UI and submit it for community review when ready.
 
 **Note:** The `.env` file is created in your current working directory. To use credentials from a different directory:
 ```bash
@@ -43,16 +43,15 @@ ae-upload upload ./data --env-file /path/to/.env
 `ae-upload configure` stores `INVENIO_COMMUNITY` as the default approved community
 and can also store `INVENIO_COMMUNITIES` to expand that approved allowlist.
 Most users do not need to think about communities; the default approved destination is used automatically.
-`--publish` uses a safe default:
-- with the default configuration, submit for review;
-- without a community, fail unless `--force-direct-publish` is provided.
+Routine uploads stay as drafts so you can check the record in the Invenio UI
+before submitting it for community review. Direct publish without review is disabled.
 
 See `QUICKSTART.md` for the minimal first-run flow.
 
 ## Common Options
 
 ```bash
-ae-upload upload ./my_data --publish
+ae-upload upload ./my_data
 ae-upload upload ./my_data --zip
 ae-upload schema --output schema.json
 ae-upload export-form --output metadata_form.html

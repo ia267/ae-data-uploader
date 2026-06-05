@@ -16,7 +16,8 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
    - Contributors (optional)
    - Domain information (discipline, field, keywords)
    - Observations (numerical or experimental)
-   - Optional: Related identifiers, funding, and license
+   - Optional: Related identifiers and funding
+   - License
 
 2. **Download JSON**: Click "Generate and Download metadata.json"
    - Browser will download the generated file
@@ -28,9 +29,12 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 
 4. **Upload via CLI**: Use the ae-upload tool
    ```bash
+   # From the directory containing your .env file:
+   ae-upload upload /path/to/my_simulation_data
+
+   # Or from the data directory, point at the .env file:
    cd /path/to/my_simulation_data
-   ae-upload upload .          # creates draft by default
-   # ae-upload upload . --publish
+   ae-upload upload . --env-file /path/to/.env
    ```
 
 ## Features
@@ -80,17 +84,17 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 ### Observations
 - Observation Type (numerical, experimental)
 - Facility/Code Name
-- Observed Quantities (comma-separated)
-- Methods (optional, comma-separated)
+- Observed Quantities (select one or more)
+- Methods (optional, select one or more)
+- Operating Conditions (optional key/value rows)
 - File Information (optional):
   - File name pattern
   - File type
-  - Variables
+  - Variables in rows with name, description, and units
 
-### License (Optional)
+### License
 - Creative Commons licenses
 - MIT
-- Or leave blank
 
 ### Funding (Optional)
 - Funder name

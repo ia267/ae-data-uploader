@@ -90,22 +90,9 @@ Directory upload:
 ae-upload upload ./my_data
 ```
 
-`upload` creates a draft by default. After upload, review the draft in the Invenio UI and publish when ready.
-
-For automated publishing via CLI (optional):
-
-```bash
-ae-upload upload ./my_data --publish
-```
-
-When using `--publish`:
-- with the default configuration, the draft is submitted for review using the
-  standard approved destination;
-- when `INVENIO_COMMUNITIES` is set, `--community` must match one of the
-  approved communities in that allowlist;
-- the target community is validated before the uploader creates a draft or
-  uploads files;
-- without a community, the command fails unless `--force-direct-publish` is set.
+`upload` creates a draft by default and links it to the default community
+`ae-dept-data`. After upload, review the draft in the Invenio UI and submit it
+for community review when ready.
 
 Single file upload:
 
@@ -116,13 +103,34 @@ ae-upload upload ./my_data/file.h5 --metadata /path/to/metadata.json
 Common options:
 
 ```bash
-ae-upload upload ./my_data --publish
-ae-upload upload ./my_data --community future-lab-data --publish
+ae-upload upload ./my_data
 ae-upload upload ./my_data --zip
 ae-upload upload ./my_data --metadata /path/to/metadata.json
 ae-upload upload ./my_data --schema schema.json
 ae-upload upload ./my_data --auto-index --index-pattern "*.h5"
 ```
+
+## Advanced Immediate Review Submission
+
+Most uploads should not use this. Create the draft, check the files and
+metadata in the UI, then submit it for review from there.
+
+If the record has already been checked and should be submitted to community
+review immediately after upload:
+
+```bash
+ae-upload upload ./my_data --submit-review
+```
+
+When using `--submit-review`:
+- with the default configuration, the draft is submitted for review using
+  `ae-dept-data`;
+- when `INVENIO_COMMUNITIES` is set, `--community` must match one of the
+  approved communities in that allowlist;
+- the target community is validated before the uploader creates a draft or
+  uploads files;
+- without a community, the command fails;
+- direct publish without review is disabled.
 
 ## Advanced Community Targeting
 
