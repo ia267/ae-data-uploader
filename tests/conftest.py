@@ -13,6 +13,11 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 
+@pytest.fixture(autouse=True)
+def isolated_ae_upload_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("AE_UPLOAD_CONFIG_DIR", str(tmp_path / "ae-upload-config"))
+
+
 @pytest.fixture
 def valid_metadata() -> dict:
     return {

@@ -29,12 +29,12 @@ Open `src/ae_uploader/web/metadata_form.html` directly in your browser.
 
 4. **Upload via CLI**: Use the ae-upload tool
    ```bash
-   # From the directory containing your .env file:
+   # After running ae-upload configure once:
    ae-upload upload /path/to/my_simulation_data
 
-   # Or from the data directory, point at the .env file:
+   # Or from the data directory:
    cd /path/to/my_simulation_data
-   ae-upload upload . --env-file /path/to/.env
+   ae-upload upload .
    ```
 
 ## Features

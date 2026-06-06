@@ -47,13 +47,13 @@ ae-upload info           # Show configuration status
 2. CLI loads and validates metadata against JSON schema
 3. InvenioClient creates draft record via API
 4. Files uploaded (zipped by default)
-5. Draft published to make record public
+5. Draft is linked to the configured community for review
 
 ### Key Patterns
 
-- **Configuration priority**: CLI options → environment variables → .env file → interactive prompts
+- **Configuration priority**: CLI options → environment variables → user config store → interactive prompts
 - **Custom field namespace**: Domain metadata stored in Invenio's `custom_fields` under configurable namespace (default: "domain")
-- **Credential storage**: .env file with 600 permissions for security
+- **Credential storage**: user config directory plus system credential store when available; protected user config fallback otherwise
 
 ## Environment Variables
 

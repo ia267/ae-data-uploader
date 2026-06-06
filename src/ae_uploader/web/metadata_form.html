@@ -2443,13 +2443,13 @@
             );
             appendCommandStep(
                 list,
-                'Run upload from the directory that contains your .env file:',
+                'After running ae-upload configure once, upload the data directory:',
                 'ae-upload upload /path/to/my_data_directory'
             );
             appendCommandStep(
                 list,
-                'Or, from the data folder, point to the .env file explicitly:',
-                'cd /path/to/my_data_directory && ae-upload upload . --env-file /path/to/.env'
+                'Or run from inside the data directory:',
+                'cd /path/to/my_data_directory && ae-upload upload .'
             );
             panel.appendChild(list);
             status.appendChild(panel);

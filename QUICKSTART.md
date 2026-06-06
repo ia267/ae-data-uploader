@@ -16,14 +16,11 @@ pip install -e .
 ae-upload configure
 ```
 
-This saves credentials to `.env` in your current directory.
-By default uploads target community `ae-dept-data` (stored as `INVENIO_COMMUNITY`).
+This saves non-secret settings in your user config directory and stores the
+token in the system credential store when available. By default uploads target
+community `ae-dept-data`.
 
 After this step, you only need to repeat it if your credentials or preferred community changes.
-
-**Note:** The `.env` file is created in your current working directory. To use it from a different directory, either:
-- Navigate to the directory where `.env` is located, or
-- Use `ae-upload upload ./data --env-file /path/to/.env`
 
 ## Step 2: Create Metadata (for each dataset)
 

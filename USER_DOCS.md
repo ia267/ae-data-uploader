@@ -13,13 +13,19 @@ pip install -e .
 
 ## Configure Credentials (one-time setup)
 
-Run this once to save your credentials to `.env` in your current directory. After setup, you only need to run it again if your credentials or preferred community changes.
+Run this once to save your upload settings. Non-secret settings are stored in
+your user config directory and the access token is stored in the system
+credential store when available.
 
-**Important:** The `.env` file is created in your current working directory. To use credentials from a different directory, use the `--env-file` option:
+This works across the supported platforms:
+- Linux: XDG user config directory, with Secret Service/KWallet/GNOME Keyring
+  when available.
+- macOS: user config directory, with Keychain via the system credential store.
+- Windows: user config directory, with Windows Credential Manager via the
+  system credential store.
 
-```bash
-ae-upload upload ./data --env-file /path/to/.env
-```
+If no system credential store is available, `ae-upload` saves the token in a
+protected credentials file in the same user config directory.
 
 Interactive setup:
 
@@ -27,18 +33,15 @@ Interactive setup:
 ae-upload configure
 ```
 
-Manual `.env`:
+Environment variables for scripts or temporary credentials:
 
-```env
-INVENIO_URL=https://your-invenio-instance.org
-INVENIO_TOKEN=your_access_token
-CUSTOM_FIELD_NAMESPACE=domain
-INVENIO_COMMUNITY=ae-dept-data
-INVENIO_COMMUNITIES=ae-dept-data,future-lab-data
+```bash
+INVENIO_URL=https://your-invenio-instance.org \
+INVENIO_TOKEN=your_access_token \
+ae-upload upload ./data
 ```
 
 Notes:
-- `CUSTOM_FIELD_NAMESPACE` is optional for most users; default is `domain`.
 - Most users can leave the default upload destination alone and do not need to
   set community values manually.
 - `INVENIO_COMMUNITY` is optional; default is `ae-dept-data`.

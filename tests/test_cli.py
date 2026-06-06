@@ -6,7 +6,14 @@ from pathlib import Path
 import requests
 from click.testing import CliRunner
 
-from ae_uploader.cli import _save_credentials, cli
+from ae_uploader.cli import cli
+from ae_uploader.config import CredentialStorageResult, load_config, save_config
+
+
+def _set_test_config_dir(monkeypatch, tmp_path: Path) -> Path:
+    config_dir = tmp_path / "ae-upload-config"
+    monkeypatch.setenv("AE_UPLOAD_CONFIG_DIR", str(config_dir))
+    return config_dir
 
 
 def test_generate_command_creates_template_file(tmp_path):
@@ -75,7 +82,9 @@ def test_info_command_reports_ready_configuration(monkeypatch):
     assert "INVENIO_COMMUNITIES: ae-dept-data, future-lab-data" in result.output
 
 
-def test_configure_command_shows_export_form_next_steps(monkeypatch):
+def test_configure_command_shows_export_form_next_steps(tmp_path, monkeypatch):
+    config_dir = _set_test_config_dir(monkeypatch, tmp_path)
+
     class _DummyResponse:
         status_code = 200
 
@@ -96,13 +105,20 @@ def test_configure_command_shows_export_form_next_steps(monkeypatch):
             self.session = _DummySession()
 
     monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    monkeypatch.setattr(
+        "ae_uploader.cli.save_token",
+        lambda _url, _token: CredentialStorageResult(
+            method="file",
+            path=config_dir / "credentials.json",
+        ),
+    )
     runner = CliRunner()
 
     with runner.isolated_filesystem():
         result = runner.invoke(
             cli,
             ["configure"],
-            input="https://example.org\nsecret-token\ndomain\nn\n",
+            input="https://example.org\nsecret-token\nn\n",
         )
 
     assert result.exit_code == 0
@@ -112,11 +128,17 @@ def test_configure_command_shows_export_form_next_steps(monkeypatch):
     assert "alternative: ae-upload generate numerical" not in result.output
     assert "ae-upload validate metadata.json" not in result.output
     assert "ae-upload upload ./my_data_directory" in result.output
-    assert "To use this .env file from a different directory:" in result.output
-    assert "ae-upload upload ./data --env-file" in result.output
+    assert "Configuration saved to" in result.output
+    assert "Token saved to" in result.output
+    assert "For scripts or temporary credentials" in result.output
+    assert "INVENIO_TOKEN=... ae-upload upload ./data" in result.output
+    assert "Custom Field Namespace" not in result.output
+    assert "Enter namespace" not in result.output
 
 
-def test_configure_uses_default_community_without_advanced_prompt(monkeypatch):
+def test_configure_uses_default_community_without_advanced_prompt(tmp_path, monkeypatch):
+    config_dir = _set_test_config_dir(monkeypatch, tmp_path)
+
     class _DummyResponse:
         status_code = 200
 
@@ -137,23 +159,33 @@ def test_configure_uses_default_community_without_advanced_prompt(monkeypatch):
             self.session = _DummySession()
 
     monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    monkeypatch.setattr(
+        "ae_uploader.cli.save_token",
+        lambda _url, _token: CredentialStorageResult(
+            method="file",
+            path=config_dir / "credentials.json",
+        ),
+    )
     runner = CliRunner()
 
     with runner.isolated_filesystem():
         result = runner.invoke(
             cli,
             ["configure"],
-            input="https://example.org\nsecret-token\ndomain\nn\n",
+            input="https://example.org\nsecret-token\nn\n",
         )
 
-        env_contents = Path(".env").read_text(encoding="utf-8")
-
     assert result.exit_code == 0
-    assert f"INVENIO_COMMUNITY=ae-dept-data" in env_contents
-    assert "INVENIO_COMMUNITIES=ae-dept-data" in env_contents
+    config = load_config()
+    assert config["url"] == "https://example.org"
+    assert config["namespace"] == "domain"
+    assert config["community"] == "ae-dept-data"
+    assert config["allowed_communities"] == ["ae-dept-data"]
 
 
-def test_configure_can_set_advanced_communities(monkeypatch):
+def test_configure_can_set_advanced_communities(tmp_path, monkeypatch):
+    config_dir = _set_test_config_dir(monkeypatch, tmp_path)
+
     class _DummyResponse:
         status_code = 200
 
@@ -174,58 +206,26 @@ def test_configure_can_set_advanced_communities(monkeypatch):
             self.session = _DummySession()
 
     monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    monkeypatch.setattr(
+        "ae_uploader.cli.save_token",
+        lambda _url, _token: CredentialStorageResult(
+            method="file",
+            path=config_dir / "credentials.json",
+        ),
+    )
     runner = CliRunner()
 
     with runner.isolated_filesystem():
         result = runner.invoke(
             cli,
             ["configure"],
-            input="https://example.org\nsecret-token\ndomain\ny\nfuture-lab-data\nae-dept-data\n",
+            input="https://example.org\nsecret-token\ny\nfuture-lab-data\nae-dept-data\n",
         )
 
-        env_contents = Path(".env").read_text(encoding="utf-8")
-
     assert result.exit_code == 0
-    assert "INVENIO_COMMUNITY=future-lab-data" in env_contents
-    assert "INVENIO_COMMUNITIES=future-lab-data,ae-dept-data" in env_contents
-
-
-def test_save_credentials_writes_secure_env_file(tmp_path):
-    env_path = tmp_path / ".env"
-
-    _save_credentials(
-        env_path,
-        "https://example.org",
-        "token",
-        "domain",
-        "ae-dept-data",
-        ["ae-dept-data", "future-lab-data"],
-    )
-
-    env_contents = env_path.read_text(encoding="utf-8")
-    assert "INVENIO_URL=https://example.org" in env_contents
-    assert "INVENIO_TOKEN=token" in env_contents
-    assert "CUSTOM_FIELD_NAMESPACE=domain" in env_contents
-    assert "INVENIO_COMMUNITY=ae-dept-data" in env_contents
-    assert "INVENIO_COMMUNITIES=ae-dept-data,future-lab-data" in env_contents
-    assert env_path.stat().st_mode & 0o777 == 0o600
-
-
-def test_save_credentials_persists_single_allowed_community(tmp_path):
-    env_path = tmp_path / ".env"
-
-    _save_credentials(
-        env_path,
-        "https://example.org",
-        "token",
-        "domain",
-        "ae-dept-data",
-        ["ae-dept-data"],
-    )
-
-    env_contents = env_path.read_text(encoding="utf-8")
-    assert "INVENIO_COMMUNITY=ae-dept-data" in env_contents
-    assert "INVENIO_COMMUNITIES=ae-dept-data" in env_contents
+    config = load_config()
+    assert config["community"] == "future-lab-data"
+    assert config["allowed_communities"] == ["future-lab-data", "ae-dept-data"]
 
 
 def test_upload_submit_review_without_community_is_rejected(tmp_path):
@@ -392,14 +392,15 @@ def test_upload_draft_403_shows_env_file_and_token_hints(
     assert result.exit_code == 1
     assert "Error creating draft" in result.output
     assert "Forbidden" in result.output
-    assert ".env" in result.output
-    assert "--env-file /path/to/.env" in result.output
+    assert "ae-upload configure" in result.output
+    assert "INVENIO_TOKEN" in result.output
     assert "deposit:write" in result.output
 
 
-def test_upload_loads_env_from_current_working_directory_without_env_file(
-    valid_metadata: dict, monkeypatch
+def test_upload_loads_user_config_without_env_file(
+    tmp_path, valid_metadata: dict, monkeypatch
 ):
+    _set_test_config_dir(monkeypatch, tmp_path)
     for name in [
         "INVENIO_URL",
         "INVENIO_TOKEN",
@@ -408,6 +409,14 @@ def test_upload_loads_env_from_current_working_directory_without_env_file(
         "INVENIO_COMMUNITIES",
     ]:
         monkeypatch.delenv(name, raising=False)
+
+    save_config(
+        "https://stored.example.org",
+        namespace="domain",
+        community="ae-dept-data",
+        allowed_communities=["ae-dept-data"],
+    )
+    monkeypatch.setattr("ae_uploader.cli.load_token", lambda _url: "stored-token")
 
     captured = {}
 
@@ -449,24 +458,12 @@ def test_upload_loads_env_from_current_working_directory_without_env_file(
             encoding="utf-8",
         )
         (data_dir / "data.h5").write_text("dummy", encoding="utf-8")
-        Path(".env").write_text(
-            "\n".join(
-                [
-                    "INVENIO_URL=https://env.example.org",
-                    "INVENIO_TOKEN=env-token",
-                    "CUSTOM_FIELD_NAMESPACE=domain",
-                    "INVENIO_COMMUNITY=ae-dept-data",
-                    "INVENIO_COMMUNITIES=ae-dept-data",
-                ]
-            ),
-            encoding="utf-8",
-        )
 
         result = runner.invoke(cli, ["upload", str(data_dir)])
 
     assert result.exit_code == 0
-    assert captured["url"] == "https://env.example.org"
-    assert captured["token"] == "env-token"
+    assert captured["url"] == "https://stored.example.org"
+    assert captured["token"] == "stored-token"
     assert captured["community"] == "ae-dept-data"
     assert captured["allowed_communities"] == ["ae-dept-data"]
 
@@ -735,3 +732,29 @@ def test_upload_rejects_publish_flag(tmp_path):
     assert result.exit_code == 2
     assert "No such option" in result.output
     assert "--publish" in result.output
+
+
+def test_upload_rejects_env_file_flag(tmp_path):
+    data_file = tmp_path / "data.h5"
+    data_file.write_text("dummy", encoding="utf-8")
+    env_file = tmp_path / ".env"
+    env_file.write_text("INVENIO_TOKEN=token\n", encoding="utf-8")
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli,
+        [
+            "upload",
+            str(data_file),
+            "--env-file",
+            str(env_file),
+            "--url",
+            "https://example.org",
+            "--token",
+            "token",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "No such option" in result.output
+    assert "--env-file" in result.output

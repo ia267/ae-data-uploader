@@ -31,13 +31,15 @@ ae-upload export-form --output metadata_form.html
 ae-upload upload ./my_data_directory
 ```
 
-After `ae-upload configure`, credentials are saved to `.env` in that directory. The `configure` command only needs to run once.
+After `ae-upload configure`, non-secret settings are saved in your user config
+directory and the token is stored in the system credential store when available.
+The `configure` command only needs to run once.
 Metadata validation happens automatically during upload, so you can skip directly to `ae-upload upload` if metadata already exists.
 After upload, review the draft in the Invenio UI and submit it for community review when ready.
 
-**Note:** The `.env` file is created in your current working directory. To use credentials from a different directory:
+For scripts or temporary credentials, pass environment variables:
 ```bash
-ae-upload upload ./data --env-file /path/to/.env
+INVENIO_TOKEN=... ae-upload upload ./data
 ```
 
 `ae-upload configure` stores `INVENIO_COMMUNITY` as the default approved community
