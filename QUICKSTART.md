@@ -9,7 +9,7 @@ git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
 python -m venv venv
 source venv/bin/activate
-python -m pip install -e .
+pip install -e .
 ```
 
 On Debian or Ubuntu, run `sudo apt install python3-venv` first if the virtual

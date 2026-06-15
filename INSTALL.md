@@ -20,20 +20,20 @@ git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
 python -m venv venv
 source venv/bin/activate
-python -m pip install -e .
+pip install -e .
 ```
 
 Optional: install development dependencies:
 
 ```bash
-python -m pip install -e ".[dev]"
+pip install -e ".[dev]"
 ```
 
 Alternative: after creating and activating a virtual environment, install
 directly via SSH without cloning:
 
 ```bash
-python -m pip install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
+pip install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
 ```
 
 ## Verify Installation
@@ -44,7 +44,7 @@ ae-upload info
 ```
 
 If `ae-upload` is not found, activate the virtual environment with
-`source venv/bin/activate` and reinstall with `python -m pip install -e .`.
+`source venv/bin/activate` and reinstall with `pip install -e .`.
 
 ## Run Tests
 
