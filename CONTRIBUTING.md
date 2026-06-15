@@ -7,14 +7,12 @@ Thanks for contributing to `ae-uploader`.
 ```bash
 git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
-pip install -e .[dev]
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
 ```
 
-If your environment uses a dedicated venv, activate it first, for example:
-
-```bash
-source ~/.venv/data_repo/bin/activate
-```
+On Debian or Ubuntu, run `sudo apt install python3-venv` first if needed.
 
 ## Run Tests
 

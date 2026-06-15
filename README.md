@@ -14,8 +14,13 @@ Supports:
 ```bash
 git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
-pip install -e .
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 ```
+
+On Debian or Ubuntu, run `sudo apt install python3-venv` first if needed.
+Activate `.venv` again before using `ae-upload` in a new terminal.
 
 ## Quick Start
 

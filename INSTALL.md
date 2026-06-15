@@ -6,29 +6,34 @@ For end-user upload workflow, use `QUICKSTART.md` and `USER_DOCS.md`.
 ## Prerequisites
 
 - Python 3.9+
+- Python virtual environment support (`python3-venv` on Debian/Ubuntu)
 - Git
 - SSH access to `github.ic.ac.uk` (for cloning private repository URLs)
 
 ## Install
 
-Clone and install in editable mode:
+Clone the repository, create an isolated virtual environment, and install in
+editable mode:
 
 ```bash
 git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
-pip install -e .
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 ```
 
 Optional: install development dependencies:
 
 ```bash
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 ```
 
-Alternative: install directly via SSH without cloning:
+Alternative: after creating and activating a virtual environment, install
+directly via SSH without cloning:
 
 ```bash
-pip install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
+python -m pip install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
 ```
 
 ## Verify Installation
@@ -38,7 +43,8 @@ ae-upload --version
 ae-upload info
 ```
 
-If `ae-upload` is not found, ensure your virtual environment is activated and reinstall with `pip install -e .`.
+If `ae-upload` is not found, activate the virtual environment with
+`source .venv/bin/activate` and reinstall with `python -m pip install -e .`.
 
 ## Run Tests
 

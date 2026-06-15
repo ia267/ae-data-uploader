@@ -7,8 +7,13 @@ Fastest path to your first upload with `ae-upload`.
 ```bash
 git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
-pip install -e .
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 ```
+
+On Debian or Ubuntu, run `sudo apt install python3-venv` first if the virtual
+environment command is unavailable.
 
 ## Step 1: Configure Credentials (one-time)
 
