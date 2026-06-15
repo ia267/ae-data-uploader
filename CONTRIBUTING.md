@@ -7,8 +7,8 @@ Thanks for contributing to `ae-uploader`.
 ```bash
 git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
-python3 -m venv .venv
-source .venv/bin/activate
+python -m venv venv
+source venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 

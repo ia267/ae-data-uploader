@@ -18,8 +18,8 @@ editable mode:
 ```bash
 git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
-python3 -m venv .venv
-source .venv/bin/activate
+python -m venv venv
+source venv/bin/activate
 python -m pip install -e .
 ```
 
@@ -44,7 +44,7 @@ ae-upload info
 ```
 
 If `ae-upload` is not found, activate the virtual environment with
-`source .venv/bin/activate` and reinstall with `python -m pip install -e .`.
+`source venv/bin/activate` and reinstall with `python -m pip install -e .`.
 
 ## Run Tests
 
