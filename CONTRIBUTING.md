@@ -7,12 +7,14 @@ Thanks for contributing to `ae-uploader`.
 ```bash
 git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
 cd ae-data-uploader
-python -m venv venv
+uv venv venv
 source venv/bin/activate
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 ```
 
-On Debian or Ubuntu, run `sudo apt install python3-venv` first if needed.
+Plain `python -m venv venv` and `pip install -e ".[dev]"` also work. While
+`venv` is active, `ae-upload` runs your local checkout rather than a
+`uv tool install` copy.
 
 ## Run Tests
 

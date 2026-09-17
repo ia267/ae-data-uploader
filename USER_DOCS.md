@@ -5,16 +5,35 @@ For the shortest first-run path, use `QUICKSTART.md`.
 
 ## Install
 
+Install with [uv](https://docs.astral.sh/uv/), which puts `ae-upload` on your
+PATH so it works in every terminal without activating anything:
+
 ```bash
-git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
-cd ae-data-uploader
-python -m venv venv
-source venv/bin/activate
-pip install -e .
+uv tool install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
 ```
 
-On Debian or Ubuntu, run `sudo apt install python3-venv` first if needed.
-Activate `venv` again before using `ae-upload` in a new terminal.
+If you don't have `uv` yet, install it first:
+
+```bash
+# Linux and macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+If `ae-upload` is not found afterwards, run `uv tool update-shell` and open a
+new terminal. Installing needs SSH access to `github.ic.ac.uk`.
+
+Update to the latest version with `uv tool upgrade ae-uploader`.
+
+To remove it: `uv tool uninstall ae-uploader`.
+
+`--auto-index` and `generate-index` need extra libraries for HDF5 and NetCDF
+files. Add them to the installed tool with:
+
+```bash
+uv tool install --reinstall --with h5py --with netCDF4 git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
+```
 
 ## Configure Credentials (one-time setup)
 
@@ -206,7 +225,8 @@ ae-upload completion --install
 
 Then open a new terminal and try `ae-upload up<TAB>`. This adds one marked
 line to `~/.bashrc` or `~/.zshrc` (fish uses its completions directory).
-Completion only works while the `venv` with `ae-upload` is active.
+Completion works wherever `ae-upload` is on your PATH, which is every
+terminal when installed with `uv tool install`.
 
 To print the script instead of installing it:
 

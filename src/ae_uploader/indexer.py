@@ -97,8 +97,7 @@ class IndexGenerator:
             import h5py
         except ImportError:
             raise ImportError(
-                "h5py is required for HDF5 index generation. "
-                "Install with: pip install h5py"
+                "h5py is required for HDF5 index generation."
             )
         
         index = {
@@ -262,8 +261,7 @@ class IndexGenerator:
             import netCDF4 as nc
         except ImportError:
             raise ImportError(
-                "netCDF4 is required for NetCDF index generation. "
-                "Install with: pip install netCDF4"
+                "netCDF4 is required for NetCDF index generation."
             )
         
         index = {

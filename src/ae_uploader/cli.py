@@ -101,6 +101,22 @@ def _is_auth_http_error(exc: Exception) -> bool:
     )
 
 
+INSTALL_SOURCE = "git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git"
+
+
+def _library_install_hint(library: str) -> str:
+    """Command that adds an optional library to a `uv tool` install."""
+    return f"uv tool install --reinstall --with {library} {INSTALL_SOURCE}"
+
+
+def _missing_library(error: ImportError) -> Optional[str]:
+    message = str(error)
+    for library in ("h5py", "netCDF4", "numpy"):
+        if library.lower() in message.lower():
+            return library
+    return None
+
+
 def _stdin_is_interactive() -> bool:
     """Return True when a person can answer prompts on stdin."""
     return sys.stdin.isatty()
@@ -532,12 +548,9 @@ def upload(data_path: str,
                 ui.detail(f"Index size: {_format_bytes(index_file.stat().st_size)}")
         except ImportError as e:
             ui.warn(f"Could not generate index: {e}")
-            if 'h5py' in str(e):
-                ui.detail("Install required library: pip install h5py", err=True)
-            elif 'netCDF4' in str(e):
-                ui.detail("Install required library: pip install netCDF4", err=True)
-            elif 'numpy' in str(e).lower():
-                ui.detail("Install required library: pip install numpy", err=True)
+            library = _missing_library(e)
+            if library:
+                ui.detail(f"Install required library: {_library_install_hint(library)}", err=True)
             ui.warn("Continuing without index...")
             auto_index = False
         except Exception as e:
@@ -920,13 +933,10 @@ def generate_index(file_or_directory: str,
             
     except ImportError as e:
         click.echo(f"[ERROR] {e}", err=True)
-        click.echo("\n[HINT] Install required library:", err=True)
-        if 'h5py' in str(e):
-            click.echo("  pip install h5py", err=True)
-        elif 'netCDF4' in str(e):
-            click.echo("  pip install netCDF4", err=True)
-        elif 'numpy' in str(e).lower():
-            click.echo("  pip install numpy", err=True)
+        library = _missing_library(e)
+        if library:
+            click.echo("\n[HINT] Install required library:", err=True)
+            click.echo(f"  {_library_install_hint(library)}", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"[ERROR] Failed to generate index: {e}", err=True)

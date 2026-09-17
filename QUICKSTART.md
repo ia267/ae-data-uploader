@@ -4,16 +4,26 @@ Fastest path to your first upload with `ae-upload`.
 
 ## Installation
 
+Install with [uv](https://docs.astral.sh/uv/), which puts `ae-upload` on your
+PATH so it works in every terminal without activating anything:
+
 ```bash
-git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
-cd ae-data-uploader
-python -m venv venv
-source venv/bin/activate
-pip install -e .
+uv tool install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
 ```
 
-On Debian or Ubuntu, run `sudo apt install python3-venv` first if the virtual
-environment command is unavailable.
+If you don't have `uv` yet, install it first:
+
+```bash
+# Linux and macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+If `ae-upload` is not found afterwards, run `uv tool update-shell` and open a
+new terminal. Installing needs SSH access to `github.ic.ac.uk`.
+
+Update to the latest version with `uv tool upgrade ae-uploader`.
 
 ## Step 1: Configure Credentials (one-time)
 
