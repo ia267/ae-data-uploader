@@ -156,6 +156,26 @@ def _get_keyring_token(url: str) -> Optional[str]:
     return token or None
 
 
+def _keyring_backend_is_secure(backend: Any) -> bool:
+    """
+    Return False for keyring backends that do not protect the secret.
+
+    ``keyring`` can silently select the ``fail`` backend (nothing available),
+    a ``null`` backend, or plaintext/obfuscated file backends from
+    ``keyrings.alt``. Only real system credential stores count as secure.
+    """
+    backends = getattr(backend, "backends", None) or [backend]
+    for candidate in backends:
+        module = type(candidate).__module__
+        if module.startswith("keyrings.alt") or module in (
+            "keyring.backends.fail",
+            "keyring.backends.null",
+        ):
+            continue
+        return True
+    return False
+
+
 def _save_keyring_token(url: str, token: str) -> bool:
     try:
         import keyring
@@ -163,6 +183,8 @@ def _save_keyring_token(url: str, token: str) -> bool:
         return False
 
     try:
+        if not _keyring_backend_is_secure(keyring.get_keyring()):
+            return False
         keyring.set_password(KEYRING_SERVICE, url, token)
     except Exception:
         return False
@@ -195,11 +217,27 @@ def load_token(url: str) -> Optional[str]:
     return _load_fallback_tokens().get(url)
 
 
-def save_token(url: str, token: str) -> CredentialStorageResult:
-    """Save a token to keyring, or to a protected user-level fallback file."""
+def save_token(
+    url: str, token: str, allow_file: bool = False
+) -> CredentialStorageResult:
+    """
+    Save a token to the system credential store.
+
+    If no secure credential store is available the token is not saved
+    (``method="none"``), unless ``allow_file`` is True, in which case it is
+    written to a protected user-level file.
+    """
     url = url.strip()
     if _save_keyring_token(url, token):
         return CredentialStorageResult(method="keyring")
+
+    if not allow_file:
+        return CredentialStorageResult(
+            method="none",
+            warning=(
+                "No system credential store is available, so the token was not saved."
+            ),
+        )
 
     credentials_path = fallback_credentials_path()
     tokens = _load_fallback_tokens(credentials_path)
@@ -208,5 +246,8 @@ def save_token(url: str, token: str) -> CredentialStorageResult:
     return CredentialStorageResult(
         method="file",
         path=credentials_path,
-        warning="System keyring was unavailable; token saved to a protected user config file.",
+        warning=(
+            "System credential store was unavailable; token saved in a file "
+            "readable only by your user account."
+        ),
     )

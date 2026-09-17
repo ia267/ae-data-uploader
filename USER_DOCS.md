@@ -29,8 +29,15 @@ This works across the supported platforms:
 - Windows: user config directory, with Windows Credential Manager via the
   system credential store.
 
-If no system credential store is available, `ae-upload` saves the token in a
-protected credentials file in the same user config directory.
+If no system credential store is available (common over SSH, on headless
+servers and on HPC nodes), `ae-upload` does not save the token. `upload` then
+asks for it each time, or you can set `INVENIO_TOKEN` for a single command.
+If you accept the risk of keeping the token in a file readable only by your
+account, run:
+
+```bash
+ae-upload configure --token-file
+```
 
 Interactive setup:
 

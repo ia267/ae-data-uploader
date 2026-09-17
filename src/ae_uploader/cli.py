@@ -167,11 +167,30 @@ def _save_user_credentials(
     namespace: str,
     community: str,
     allowed_communities: Optional[List[str]],
+    allow_token_file: bool = False,
 ) -> tuple[Path, CredentialStorageResult]:
     """Save non-secret config plus token using the safest available backend."""
     config_path = save_config(url, namespace, community, allowed_communities)
-    token_storage = save_token(url, token)
+    token_storage = save_token(url, token, allow_file=allow_token_file)
     return config_path, token_storage
+
+
+def _echo_token_storage(token_storage: CredentialStorageResult) -> None:
+    """Explain where the token was saved, or why it was not."""
+    if token_storage.method == "keyring":
+        click.echo("[OK] Token saved to the system credential store")
+    elif token_storage.method == "file":
+        click.echo(f"[OK] Token saved to {token_storage.path}")
+        if token_storage.warning:
+            click.echo(f"[WARNING] {token_storage.warning}", err=True)
+    else:
+        click.echo(f"[INFO] {token_storage.warning}")
+        click.echo("   You will be asked for the token each time you upload,")
+        click.echo("   or you can set INVENIO_TOKEN for a single command.")
+        click.echo(
+            "   To save it in a file readable only by your account instead, run: "
+            "ae-upload configure --token-file"
+        )
 
 
 from . import __version__
@@ -316,12 +335,7 @@ def upload(data_path: str,
             url, token, namespace, community, allowed_communities
         )
         click.echo(f"[OK] Configuration saved to {config_path}")
-        if token_storage.method == "keyring":
-            click.echo("[OK] Token saved to the system credential store")
-        else:
-            click.echo(f"[OK] Token saved to {token_storage.path}")
-            if token_storage.warning:
-                click.echo(f"[WARNING] {token_storage.warning}", err=True)
+        _echo_token_storage(token_storage)
     
     # Determine if data_path is a file or directory
     path = Path(data_path)
@@ -917,7 +931,9 @@ def info():
     community = _default_community_from_env(allowed_communities, stored_config)
 
     click.echo(f"  INVENIO_URL: {url}")
-    click.echo(f"  INVENIO_TOKEN: {'Set' if token else 'Not set'}")
+    click.echo(
+        f"  INVENIO_TOKEN: {'Set' if token else 'Not saved (asked for when uploading)'}"
+    )
     click.echo(f"  Metadata namespace: {namespace}")
     click.echo(f"  INVENIO_COMMUNITY: {community}")
     click.echo(
@@ -926,7 +942,7 @@ def info():
     )
     click.echo(f"  User config: {user_config_path()}")
     
-    if token and url:
+    if raw_url:
         click.echo("\n[OK] Configuration looks good!")
     else:
         click.echo("\n[WARNING] Missing configuration. Run 'ae-upload configure' to set up credentials")
@@ -952,18 +968,24 @@ def info():
 
 @cli.command()
 @click.option('--insecure', is_flag=True, help='Disable SSL verification (not recommended)')
-def configure(insecure: bool):
+@click.option('--token-file', is_flag=True,
+              help='If no system credential store is available, save the token '
+                   'in a file readable only by your account instead of not saving it')
+def configure(insecure: bool, token_file: bool):
     """
     Configure Invenio-RDM credentials interactively.
     
     This will prompt for your Invenio instance URL and access token,
     then save non-secret settings to the user config directory and the
-    token to the system credential store when available.
+    token to the system credential store. If no credential store is
+    available, the token is not saved and upload asks for it each time
+    (unless --token-file is given).
     
     \b
     Examples:
       ae-upload configure
       ae-upload configure --insecure
+      ae-upload configure --token-file
     """
     click.echo("=" * 50)
     click.echo("Invenio-RDM Credentials Setup")
@@ -1061,14 +1083,10 @@ def configure(insecure: bool):
         namespace,
         community,
         allowed_communities,
+        allow_token_file=token_file,
     )
     click.echo(f"\n[OK] Configuration saved to {config_path}")
-    if token_storage.method == "keyring":
-        click.echo("[OK] Token saved to the system credential store")
-    else:
-        click.echo(f"[OK] Token saved to {token_storage.path}")
-        if token_storage.warning:
-            click.echo(f"[WARNING] {token_storage.warning}", err=True)
+    _echo_token_storage(token_storage)
     click.echo("\nFor each new dataset:")
     click.echo("  ae-upload export-form --output metadata_form.html")
     click.echo("  # open metadata_form.html in your browser, download metadata.json")

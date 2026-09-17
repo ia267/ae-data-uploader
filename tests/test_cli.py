@@ -107,7 +107,7 @@ def test_configure_command_shows_export_form_next_steps(tmp_path, monkeypatch):
     monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
     monkeypatch.setattr(
         "ae_uploader.cli.save_token",
-        lambda _url, _token: CredentialStorageResult(
+        lambda _url, _token, **_kwargs: CredentialStorageResult(
             method="file",
             path=config_dir / "credentials.json",
         ),
@@ -161,7 +161,7 @@ def test_configure_uses_default_community_without_advanced_prompt(tmp_path, monk
     monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
     monkeypatch.setattr(
         "ae_uploader.cli.save_token",
-        lambda _url, _token: CredentialStorageResult(
+        lambda _url, _token, **_kwargs: CredentialStorageResult(
             method="file",
             path=config_dir / "credentials.json",
         ),
@@ -208,7 +208,7 @@ def test_configure_can_set_advanced_communities(tmp_path, monkeypatch):
     monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
     monkeypatch.setattr(
         "ae_uploader.cli.save_token",
-        lambda _url, _token: CredentialStorageResult(
+        lambda _url, _token, **_kwargs: CredentialStorageResult(
             method="file",
             path=config_dir / "credentials.json",
         ),
@@ -781,7 +781,7 @@ def test_configure_adds_https_to_bare_hostname(tmp_path, monkeypatch):
     monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
     monkeypatch.setattr(
         "ae_uploader.cli.save_token",
-        lambda _url, _token: CredentialStorageResult(
+        lambda _url, _token, **_kwargs: CredentialStorageResult(
             method="file",
             path=config_dir / "credentials.json",
         ),
@@ -828,3 +828,61 @@ def test_upload_normalises_url_and_reports_connection_error(
     assert result.exit_code == 1
     assert seen["url"] == "https://example.org"
     assert "Connection refused" in result.output
+
+
+def test_configure_without_keyring_does_not_save_token(tmp_path, monkeypatch):
+    config_dir = _set_test_config_dir(monkeypatch, tmp_path)
+
+    class _DummySession:
+        verify = True
+
+        def get(self, _url):
+            return type("Response", (), {"status_code": 200})()
+
+    class _DummyClient:
+        def __init__(self, url, *_args, **_kwargs):
+            self.base_url = url
+            self.session = _DummySession()
+
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    monkeypatch.setattr("ae_uploader.config._save_keyring_token", lambda _u, _t: False)
+    monkeypatch.setattr("ae_uploader.config._get_keyring_token", lambda _u: None)
+
+    result = CliRunner().invoke(
+        cli, ["configure"], input="https://example.org\nsecret-token\nn\n"
+    )
+
+    assert result.exit_code == 0
+    assert "token was not saved" in result.output
+    assert "ae-upload configure --token-file" in result.output
+    assert not (config_dir / "credentials.json").exists()
+    assert load_config()["url"] == "https://example.org"
+
+
+def test_configure_token_file_flag_saves_token_without_keyring(tmp_path, monkeypatch):
+    config_dir = _set_test_config_dir(monkeypatch, tmp_path)
+
+    class _DummySession:
+        verify = True
+
+        def get(self, _url):
+            return type("Response", (), {"status_code": 200})()
+
+    class _DummyClient:
+        def __init__(self, url, *_args, **_kwargs):
+            self.base_url = url
+            self.session = _DummySession()
+
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    monkeypatch.setattr("ae_uploader.config._save_keyring_token", lambda _u, _t: False)
+    monkeypatch.setattr("ae_uploader.config._get_keyring_token", lambda _u: None)
+
+    result = CliRunner().invoke(
+        cli,
+        ["configure", "--token-file"],
+        input="https://example.org\nsecret-token\nn\n",
+    )
+
+    assert result.exit_code == 0
+    assert (config_dir / "credentials.json").exists()
+    assert "[WARNING]" in result.output
