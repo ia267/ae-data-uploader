@@ -22,8 +22,10 @@ from .validate import validate_metadata_file, validate_with_hints, ValidationErr
 from .client import (
     DEFAULT_COMMUNITY,
     InvenioClient,
+    normalise_base_url,
     parse_community_list,
 )
+from .prompts import prompt_secret
 from .config import (
     CredentialStorageResult,
     load_config,
@@ -86,6 +88,15 @@ def _is_auth_http_error(exc: Exception) -> bool:
         and exc.response is not None
         and exc.response.status_code in {401, 403}
     )
+
+
+def _normalise_url_or_exit(url: str) -> str:
+    """Normalise an Invenio base URL, exiting with a clear error if invalid."""
+    try:
+        return normalise_base_url(url)
+    except ValueError as e:
+        click.echo(f"[ERROR] Invalid Invenio URL: {e}", err=True)
+        sys.exit(1)
 
 
 def _echo_draft_auth_hints(url: str) -> None:
@@ -233,6 +244,9 @@ def upload(data_path: str,
     # Check for required credentials - CLI/env overrides user config.
     if not url:
         url = os.environ.get('INVENIO_URL') or stored_config.get("url")
+    raw_url = url
+    if url:
+        url = _normalise_url_or_exit(url)
     if not namespace:
         namespace = (
             os.environ.get('CUSTOM_FIELD_NAMESPACE')
@@ -242,7 +256,8 @@ def upload(data_path: str,
     if not token:
         token = os.environ.get('INVENIO_TOKEN')
     if not token and url:
-        token = load_token(url)
+        # Tokens saved before URL normalisation are keyed by the raw URL.
+        token = load_token(url) or load_token(raw_url)
 
     allowed_communities = _configured_communities_from_env(stored_config)
     if community is None:
@@ -279,18 +294,13 @@ def upload(data_path: str,
         url = click.prompt('Invenio-RDM instance URL', 
                           type=str,
                           default='https://data.ae.ic.ac.uk')
+        url = _normalise_url_or_exit(url)
 
-    url = url.rstrip('/')
-    if url.endswith('/api'):
-        url = url[:-4]
-    
-    # Prompt for token if not provided (hide input for security)
+    # Prompt for token if not provided (input is masked for security)
     if not token:
         click.echo("\nYou can get an access token from your Invenio profile:")
         click.echo(f"  {url}/account/settings/applications/tokens/new/")
-        token = click.prompt('\nInvenio access token', 
-                           type=str,
-                           hide_input=True)
+        token = prompt_secret('\nInvenio access token')
     
     # Save credentials if requested
     if save_credentials and url and token:
@@ -385,7 +395,9 @@ def upload(data_path: str,
         click.echo("[WARNING] SSL verification is disabled. This is not recommended.", err=True)
     
     if not client.test_connection():
-        click.echo("[ERROR] Cannot connect to Invenio instance", err=True)
+        click.echo(f"[ERROR] Cannot connect to Invenio instance at {url}", err=True)
+        if client.last_connection_error:
+            click.echo(f"   {client.last_connection_error}", err=True)
         click.echo("   Check your URL and token", err=True)
         sys.exit(1)
     
@@ -878,10 +890,16 @@ def info():
     click.echo("\nConfiguration:")
     
     stored_config = load_config()
-    url = os.environ.get('INVENIO_URL') or stored_config.get("url") or "Not set"
+    raw_url = os.environ.get('INVENIO_URL') or stored_config.get("url")
+    url = raw_url or "Not set"
     token = os.environ.get('INVENIO_TOKEN')
-    if not token and url != "Not set":
-        token = load_token(url)
+    if raw_url:
+        try:
+            url = normalise_base_url(raw_url)
+        except ValueError as e:
+            url = f"{raw_url} (invalid: {e})"
+        if not token:
+            token = load_token(url) or load_token(raw_url)
     namespace = (
         os.environ.get('CUSTOM_FIELD_NAMESPACE')
         or stored_config.get("namespace")
@@ -953,19 +971,20 @@ def configure(insecure: bool):
     # Prompt for URL
     click.echo("\nStep 1: Invenio-RDM Instance URL")
     click.echo("  Example: https://data.ae.ic.ac.uk")
-    url = click.prompt('\nEnter URL', type=str)
-    
-    # Clean up URL
-    url = url.rstrip('/')
-    if url.endswith('/api'):
-        url = url[:-4]
-    
+    while True:
+        try:
+            url = normalise_base_url(click.prompt('\nEnter URL', type=str))
+            break
+        except ValueError as e:
+            click.echo(f"[ERROR] {e}", err=True)
+    click.echo(f"  Using {url}")
+
     # Prompt for token
     click.echo("\nStep 2: Access Token")
     click.echo("  You can create a token at:")
     click.echo(f"  {url}/account/settings/applications/tokens/new/")
     click.echo("\n  The token should have 'deposit:write' permissions")
-    token = click.prompt('\nEnter access token', type=str, hide_input=True)
+    token = prompt_secret('\nEnter access token')
     
     # Prompt for advanced community settings only when needed.
     namespace = "domain"

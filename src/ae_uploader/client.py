@@ -28,6 +28,31 @@ def parse_community_list(value: Optional[str]) -> List[str]:
     return communities
 
 
+def normalise_base_url(url: str) -> str:
+    """
+    Normalise a user-supplied Invenio base URL.
+
+    Strips whitespace, trailing slashes and a trailing ``/api``, and adds
+    ``https://`` when no scheme is given (e.g. ``data.ae.ic.ac.uk``).
+
+    Raises:
+        ValueError: If the URL is empty or uses a scheme other than http(s)
+    """
+    url = (url or "").strip().rstrip('/')
+    if url.endswith('/api'):
+        url = url[:-4]
+    if not url:
+        raise ValueError("Invenio URL is empty")
+    if "://" not in url:
+        url = f"https://{url}"
+    scheme = url.split("://", 1)[0].lower()
+    if scheme not in ("http", "https"):
+        raise ValueError(
+            f"Unsupported URL scheme '{scheme}' in '{url}' (use https://)"
+        )
+    return url
+
+
 import requests
 from requests.exceptions import RequestException
 
@@ -66,6 +91,7 @@ class InvenioClient:
                 self.allowed_communities.append(community_ref)
         self._community_id_cache: Dict[str, str] = {}
         self._draft_cache: Dict[str, Dict[str, Any]] = {}
+        self.last_connection_error: Optional[str] = None
         self.session = requests.Session()
         self.session.verify = True
         self.session.headers.update({
@@ -79,13 +105,22 @@ class InvenioClient:
         Test connection to Invenio-RDM instance.
         
         Returns:
-            True if connection successful, False otherwise
+            True if connection successful, False otherwise. On failure the
+            reason is stored in ``last_connection_error``.
         """
+        self.last_connection_error = None
         try:
             response = self.session.get(f"{self.base_url}/api/records")
-            return response.status_code in [200, 403]  # 403 means auth is working
-        except RequestException:
+        except RequestException as e:
+            self.last_connection_error = str(e)
             return False
+        if response.status_code in [200, 403]:  # 403 means auth is working
+            return True
+        self.last_connection_error = (
+            f"Server returned status code {response.status_code} "
+            f"for {self.base_url}/api/records"
+        )
+        return False
     
     def create_draft(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """

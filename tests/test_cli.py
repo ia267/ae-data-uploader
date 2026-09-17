@@ -758,3 +758,73 @@ def test_upload_rejects_env_file_flag(tmp_path):
     assert result.exit_code == 2
     assert "No such option" in result.output
     assert "--env-file" in result.output
+
+
+def test_configure_adds_https_to_bare_hostname(tmp_path, monkeypatch):
+    config_dir = _set_test_config_dir(monkeypatch, tmp_path)
+
+    class _DummyResponse:
+        status_code = 200
+
+    class _DummySession:
+        def __init__(self):
+            self.verify = True
+
+        def get(self, _url):
+            return _DummyResponse()
+
+    class _DummyClient:
+        def __init__(self, url, token, namespace, community, allowed_communities=None):
+            self.base_url = url
+            self.session = _DummySession()
+
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    monkeypatch.setattr(
+        "ae_uploader.cli.save_token",
+        lambda _url, _token: CredentialStorageResult(
+            method="file",
+            path=config_dir / "credentials.json",
+        ),
+    )
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli,
+        ["configure"],
+        input="data-dev.ae.ic.ac.uk/\nsecret-token\nn\n",
+    )
+
+    assert result.exit_code == 0
+    assert "secret-token" not in result.output
+    assert load_config()["url"] == "https://data-dev.ae.ic.ac.uk"
+
+
+def test_upload_normalises_url_and_reports_connection_error(
+    tmp_path, valid_metadata: dict, monkeypatch
+):
+    data_file = tmp_path / "data.h5"
+    data_file.write_text("dummy", encoding="utf-8")
+    metadata_file = tmp_path / "metadata.json"
+    metadata_file.write_text(json.dumps(valid_metadata), encoding="utf-8")
+    seen = {}
+
+    class _DummyClient:
+        def __init__(self, url, *_args, **_kwargs):
+            seen["url"] = url
+            self.session = type("Session", (), {"verify": True})()
+            self.last_connection_error = "Connection refused"
+
+        def test_connection(self):
+            return False
+
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli,
+        ["upload", str(data_file), "--url", "example.org", "--token", "token"],
+    )
+
+    assert result.exit_code == 1
+    assert seen["url"] == "https://example.org"
+    assert "Connection refused" in result.output

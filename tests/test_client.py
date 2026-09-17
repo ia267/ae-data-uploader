@@ -561,3 +561,29 @@ def test_upload_directory_reports_progress_for_uploadable_files(tmp_path: Path):
         str(first_file),
         str(second_file),
     ]
+
+
+def test_normalise_base_url_adds_https_and_strips_api():
+    from ae_uploader.client import normalise_base_url
+
+    assert normalise_base_url("data-dev.ae.ic.ac.uk") == "https://data-dev.ae.ic.ac.uk"
+    assert normalise_base_url(" https://example.org/api/ ") == "https://example.org"
+    assert normalise_base_url("http://localhost:5000/") == "http://localhost:5000"
+
+
+def test_normalise_base_url_rejects_bad_input():
+    import pytest
+    from ae_uploader.client import normalise_base_url
+
+    with pytest.raises(ValueError):
+        normalise_base_url("   ")
+    with pytest.raises(ValueError):
+        normalise_base_url("ftp://example.org")
+
+
+def test_test_connection_records_error_reason():
+    from ae_uploader.client import InvenioClient
+
+    client = InvenioClient("not-a-url", "token")
+    assert client.test_connection() is False
+    assert "No scheme supplied" in client.last_connection_error
