@@ -21,6 +21,7 @@ import requests
 from .validate import validate_metadata_file, validate_with_hints, ValidationError, load_schema
 from .client import (
     DEFAULT_COMMUNITY,
+    DEFAULT_URL,
     InvenioClient,
     normalise_base_url,
     parse_community_list,
@@ -321,7 +322,7 @@ def upload(data_path: str,
     if not url:
         url = click.prompt('Invenio-RDM instance URL', 
                           type=str,
-                          default='https://data.ae.ic.ac.uk')
+                          default=DEFAULT_URL)
         url = _normalise_url_or_exit(url)
 
     # Prompt for token if not provided (input is masked for security)
@@ -1035,10 +1036,12 @@ def configure(insecure: bool, token_file: bool):
     
     # Prompt for URL
     click.echo("\nStep 1: Invenio-RDM Instance URL")
-    click.echo("  Example: https://data.ae.ic.ac.uk")
+    click.echo("  Press Enter to use the default shown in brackets")
     while True:
         try:
-            url = normalise_base_url(click.prompt('\nEnter URL', type=str))
+            url = normalise_base_url(
+                click.prompt('\nEnter URL', type=str, default=DEFAULT_URL)
+            )
             break
         except ValueError as e:
             click.echo(f"[ERROR] {e}", err=True)

@@ -13,6 +13,7 @@ import tempfile
 
 
 DEFAULT_COMMUNITY = "ae-dept-data"
+DEFAULT_URL = "https://data-dev.ae.ic.ac.uk"
 
 
 def parse_community_list(value: Optional[str]) -> List[str]:

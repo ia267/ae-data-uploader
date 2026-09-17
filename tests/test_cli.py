@@ -932,3 +932,33 @@ def test_logout_requires_url(tmp_path, monkeypatch):
 
     assert result.exit_code == 1
     assert "No Invenio URL configured" in result.output
+
+
+def test_configure_defaults_to_dev_url(tmp_path, monkeypatch):
+    config_dir = _set_test_config_dir(monkeypatch, tmp_path)
+
+    class _DummySession:
+        verify = True
+
+        def get(self, _url):
+            return type("Response", (), {"status_code": 200})()
+
+    class _DummyClient:
+        def __init__(self, url, *_args, **_kwargs):
+            self.base_url = url
+            self.session = _DummySession()
+
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _DummyClient)
+    monkeypatch.setattr(
+        "ae_uploader.cli.save_token",
+        lambda _url, _token, **_kwargs: CredentialStorageResult(
+            method="file",
+            path=config_dir / "credentials.json",
+        ),
+    )
+
+    result = CliRunner().invoke(cli, ["configure"], input="\nsecret-token\nn\n")
+
+    assert result.exit_code == 0
+    assert "[https://data-dev.ae.ic.ac.uk]" in result.output
+    assert load_config()["url"] == "https://data-dev.ae.ic.ac.uk"
