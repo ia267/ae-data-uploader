@@ -34,6 +34,14 @@ from .config import (
     save_token,
     user_config_path,
 )
+from .completion import (
+    SUPPORTED_SHELLS,
+    completion_script,
+    detect_shell,
+    echo_install_result,
+    install_completion,
+    is_completion_installed,
+)
 
 
 def _get_directory_size(directory: Path) -> int:
@@ -1067,6 +1075,57 @@ def configure(insecure: bool):
     click.echo("  ae-upload upload ./my_data_directory")
     click.echo("\nFor scripts or temporary credentials, use environment variables:")
     click.echo("  INVENIO_TOKEN=... ae-upload upload ./data")
+    _offer_completion_install()
+
+
+def _offer_completion_install() -> None:
+    """Offer to enable tab completion during interactive setup."""
+    shell = detect_shell()
+    if not shell or not sys.stdin.isatty() or is_completion_installed(shell):
+        return
+    click.echo("\nTab completion lets you press TAB to complete ae-upload commands and options.")
+    if not click.confirm(f"Enable tab completion for {shell}?", default=True):
+        click.echo("  You can enable it later with: ae-upload completion --install")
+        return
+    try:
+        echo_install_result(install_completion(cli, shell))
+    except OSError as e:
+        click.echo(f"[WARNING] Could not enable tab completion: {e}", err=True)
+
+
+@cli.command()
+@click.argument('shell', required=False, type=click.Choice(SUPPORTED_SHELLS))
+@click.option('--install', is_flag=True,
+              help='Set up completion for your shell instead of printing the script')
+def completion(shell: Optional[str], install: bool):
+    """
+    Enable TAB completion for ae-upload commands and options.
+
+    SHELL is bash, zsh or fish (default: detected from $SHELL).
+
+    \b
+    Examples:
+      ae-upload completion --install
+      ae-upload completion zsh > ~/.ae-upload-completion.zsh
+    """
+    shell = shell or detect_shell()
+    if not shell:
+        click.echo(
+            "[ERROR] Could not detect a supported shell. "
+            f"Specify one of: {', '.join(SUPPORTED_SHELLS)}",
+            err=True,
+        )
+        sys.exit(1)
+
+    if not install:
+        click.echo(completion_script(cli, shell), nl=False)
+        return
+
+    try:
+        echo_install_result(install_completion(cli, shell))
+    except OSError as e:
+        click.echo(f"[ERROR] Could not enable tab completion: {e}", err=True)
+        sys.exit(1)
 
 
 @cli.command()

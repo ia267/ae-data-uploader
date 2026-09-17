@@ -55,6 +55,18 @@ before submitting it for community review. Direct publish without review is disa
 
 See `QUICKSTART.md` for the minimal first-run flow.
 
+## Tab Completion
+
+`ae-upload configure` offers to enable TAB completion for commands, options and
+file paths (bash, zsh and fish). To enable it later:
+
+```bash
+ae-upload completion --install
+```
+
+Then open a new terminal and try `ae-upload up<TAB>`. Completion is not
+available in Windows PowerShell or cmd; use WSL or Git Bash instead.
+
 ## Common Options
 
 ```bash
