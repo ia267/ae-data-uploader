@@ -394,7 +394,7 @@ def test_upload_draft_403_shows_env_file_and_token_hints(
     assert "Forbidden" in result.output
     assert "ae-upload configure" in result.output
     assert "INVENIO_TOKEN" in result.output
-    assert "deposit:write" in result.output
+    assert "/account/settings/applications/tokens/new/" in result.output
 
 
 def test_upload_loads_user_config_without_env_file(

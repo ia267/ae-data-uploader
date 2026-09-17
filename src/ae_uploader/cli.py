@@ -120,7 +120,7 @@ def _echo_draft_auth_hints(url: str) -> None:
         err=True,
     )
     click.echo(
-        f"   If needed, create a fresh token with deposit:write at {url}/account/settings/applications/tokens/new/",
+        f"   If needed, create a fresh token at {url}/account/settings/applications/tokens/new/",
         err=True,
     )
 
@@ -1051,7 +1051,6 @@ def configure(insecure: bool, token_file: bool):
     click.echo("\nStep 2: Access Token")
     click.echo("  You can create a token at:")
     click.echo(f"  {url}/account/settings/applications/tokens/new/")
-    click.echo("\n  The token should have 'deposit:write' permissions")
     token = prompt_secret('\nEnter access token')
     
     # Prompt for advanced community settings only when needed.
