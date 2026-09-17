@@ -4,8 +4,7 @@ Fastest path to your first upload with `ae-upload`.
 
 ## Installation
 
-Install with [uv](https://docs.astral.sh/uv/), which puts `ae-upload` on your
-PATH so it works in every terminal without activating anything:
+Install with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv tool install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git

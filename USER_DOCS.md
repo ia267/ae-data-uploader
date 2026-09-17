@@ -5,8 +5,7 @@ For the shortest first-run path, use `QUICKSTART.md`.
 
 ## Install
 
-Install with [uv](https://docs.astral.sh/uv/), which puts `ae-upload` on your
-PATH so it works in every terminal without activating anything:
+Install with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv tool install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
