@@ -27,6 +27,7 @@ from .client import (
     parse_community_list,
 )
 from .prompts import prompt_secret
+from .ui import UI
 from .config import (
     CredentialStorageResult,
     load_config,
@@ -98,6 +99,11 @@ def _is_auth_http_error(exc: Exception) -> bool:
         and exc.response is not None
         and exc.response.status_code in {401, 403}
     )
+
+
+def _stdin_is_interactive() -> bool:
+    """Return True when a person can answer prompts on stdin."""
+    return sys.stdin.isatty()
 
 
 def _normalise_url_or_exit(url: str) -> str:
@@ -238,6 +244,8 @@ def cli():
               help='Automatically generate and upload byte-offset index for selective downloads')
 @click.option('--index-pattern', 
               help='Glob pattern for multi-file indexing (e.g., "*.h5") - used with --auto-index')
+@click.option('--yes', '-y', 'assume_yes', is_flag=True,
+              help='Upload without asking for confirmation')
 
 def upload(data_path: str, 
            token: Optional[str],
@@ -252,7 +260,8 @@ def upload(data_path: str,
            schema: Optional[str],
            insecure: bool,
            auto_index: bool,
-           index_pattern: Optional[str]):
+           index_pattern: Optional[str],
+           assume_yes: bool):
     """
     Upload a file or directory to Invenio-RDM.
     
@@ -263,10 +272,15 @@ def upload(data_path: str,
       ae-upload upload ./data.h5 --metadata metadata.json
       ae-upload upload ./my_simulation_data --token YOUR_TOKEN --url https://invenio.example.org
       ae-upload upload ./my_simulation_data --zip
+      ae-upload upload ./my_simulation_data --yes
 
-    The command looks for metadata.json, validates it, creates a draft record,
-    uploads the selected file(s), and keeps the record as a draft by default.
+    The command looks for metadata.json, validates it, shows a summary and
+    asks for confirmation, then creates a draft record, uploads the selected
+    file(s), and keeps the record as a draft by default. The confirmation is
+    skipped with --yes or when not run in an interactive terminal.
     """
+    ui = UI()
+
     # Routine credentials live in the user config directory and token store.
     stored_config = load_config()
     
@@ -294,28 +308,25 @@ def upload(data_path: str,
     community = (community or '').strip()
 
     if allowed_communities and not community:
-        click.echo("[ERROR] Refusing upload without an approved community.", err=True)
-        click.echo(
-            "   Configure INVENIO_COMMUNITY or choose one of the approved values "
+        ui.error("Refusing upload without an approved community.")
+        ui.detail(
+            "Configure INVENIO_COMMUNITY or choose one of the approved values "
             "with --community <community-id-or-slug>.",
             err=True,
         )
-        click.echo(
-            f"   Approved communities: {', '.join(allowed_communities)}",
-            err=True,
-        )
+        ui.detail(f"Approved communities: {', '.join(allowed_communities)}", err=True)
         sys.exit(1)
 
     if draft_only_requested and submit_review:
-        click.echo("[ERROR] Choose either --draft-only or --submit-review, not both.", err=True)
+        ui.error("Choose either --draft-only or --submit-review, not both.")
         sys.exit(1)
 
     draft_only = not submit_review
 
     if submit_review and not community:
-        click.echo("[ERROR] Cannot submit for review without a configured community.", err=True)
-        click.echo("   Direct publish without review is disabled.", err=True)
-        click.echo("   Configure INVENIO_COMMUNITY or use --community <community-id-or-slug>.", err=True)
+        ui.error("Cannot submit for review without a configured community.")
+        ui.detail("Direct publish without review is disabled.", err=True)
+        ui.detail("Configure INVENIO_COMMUNITY or use --community <community-id-or-slug>.", err=True)
         sys.exit(1)
     
     # Prompt for URL if not provided
@@ -355,11 +366,11 @@ def upload(data_path: str,
     
     if not metadata_path.exists():
         location = path.parent if is_single_file else path
-        click.echo(f"[ERROR] metadata.json not found in {location}", err=True)
-        click.echo("   Use --metadata to specify a different location", err=True)
+        ui.error(f"metadata.json not found in {location}")
+        ui.detail("Use --metadata to specify a different location", err=True)
         sys.exit(1)
     
-    click.echo(f"[INFO] Validating metadata from {metadata_path}...")
+    ui.info(f"Validating metadata from {metadata_path}...")
     
     # Load custom schema if provided
     custom_schema = None
@@ -367,9 +378,9 @@ def upload(data_path: str,
         try:
             with open(schema, 'r') as f:
                 custom_schema = json.load(f)
-            click.echo(f"[INFO] Using custom schema from {schema}")
+            ui.info(f"Using custom schema from {schema}")
         except Exception as e:
-            click.echo(f"[ERROR] Failed to load custom schema: {e}", err=True)
+            ui.error(f"Failed to load custom schema: {e}")
             sys.exit(1)
 
     # Validate metadata
@@ -391,20 +402,19 @@ def upload(data_path: str,
             
             sys.exit(1)
         
-        click.echo("[OK] Metadata is valid!")
+        ui.ok("Metadata is valid!")
         
     except json.JSONDecodeError as e:
-        click.echo(f"[ERROR] Invalid JSON in metadata file: {e}", err=True)
+        ui.error(f"Invalid JSON in metadata file: {e}")
         sys.exit(1)
     except Exception as e:
-        click.echo(f"[ERROR] Validation error: {e}", err=True)
+        ui.error(f"Validation error: {e}")
         sys.exit(1)
     
     # Load metadata for upload
     metadata_dict = json.loads(metadata_path.read_text())
     
     # Initialise Invenio client
-    click.echo(f"\n[INFO] Connecting to {url}...")
     client = InvenioClient(
         url,
         token,
@@ -416,35 +426,80 @@ def upload(data_path: str,
     # Apply the insecure flag
     if insecure:
         client.session.verify = False
-        click.echo("[WARNING] SSL verification is disabled. This is not recommended.", err=True)
-    
-    if not client.test_connection():
-        click.echo(f"[ERROR] Cannot connect to Invenio instance at {url}", err=True)
+        ui.warn("SSL verification is disabled. This is not recommended.")
+
+    ui.blank()
+    with ui.status(f"Connecting to {url}..."):
+        connected = client.test_connection()
+    if not connected:
+        ui.error(f"Cannot connect to Invenio instance at {url}")
         if client.last_connection_error:
-            click.echo(f"   {client.last_connection_error}", err=True)
-        click.echo("   Check your URL and token", err=True)
+            ui.detail(client.last_connection_error, err=True)
+        ui.detail("Check your URL and token", err=True)
         sys.exit(1)
     
-    click.echo("[OK] Connected!")
+    ui.ok("Connected!")
 
     if community:
         try:
             client.resolve_submission_community(community)
         except Exception as e:
-            click.echo(
-                f"[ERROR] Invalid target community: {_format_exception(e)}",
-                err=True,
-            )
+            ui.error(f"Invalid target community: {_format_exception(e)}")
             sys.exit(1)
-    
+
+    # Work out what will be uploaded, show it, and confirm before creating
+    # anything on the server.
+    if is_single_file:
+        files_to_upload = [path]
+        upload_mode = "single file"
+    else:
+        files_to_upload = InvenioClient.uploadable_files(str(path))
+        upload_mode = "single zip archive" if zip_upload else "individual files"
+    total_size = sum(f.stat().st_size for f in files_to_upload)
+
+    file_count = len(files_to_upload)
+    files_label = f"{file_count} file{'' if file_count == 1 else 's'} ({_format_bytes(total_size)})"
+    if auto_index:
+        files_label += " + byte-offset index"
+    summary_rows = [
+        ("Server", url),
+        ("Title", str(metadata_dict.get("title") or "(untitled)")),
+        ("Community", community or "none"),
+        ("Files", files_label),
+        ("Upload mode", upload_mode),
+        (
+            "Afterwards",
+            "kept as a draft for you to review"
+            if draft_only
+            else "submitted for community review",
+        ),
+    ]
+    ui.blank()
+    if ui.rich:
+        ui.summary("Ready to upload", summary_rows)
+    else:
+        ui.summary("Ready to upload", summary_rows[:3])
+        ui.info(f"Uploadable files: {file_count} ({_format_bytes(total_size)})")
+        ui.info(f"Upload mode: {upload_mode}")
+        click.echo(f"   Afterwards: {summary_rows[-1][1]}")
+
+    if not is_single_file and not files_to_upload:
+        ui.warn("No uploadable files found. metadata.json and hidden files are skipped.")
+
+    if not assume_yes and _stdin_is_interactive():
+        if not click.confirm("Continue?", default=True):
+            ui.info("Upload cancelled. Nothing was created on the server.")
+            return
+
     # Create draft
-    click.echo("\n[INFO] Creating draft record...")
+    ui.blank()
     try:
-        draft = client.create_draft(metadata_dict)
+        with ui.status("Creating draft record..."):
+            draft = client.create_draft(metadata_dict)
         draft_id = draft['id']
-        click.echo(f"[OK] Draft created with ID: {draft_id}")
+        ui.ok(f"Draft created with ID: {draft_id}")
     except Exception as e:
-        click.echo(f"[ERROR] Error creating draft: {_format_exception(e)}", err=True)
+        ui.error(f"Error creating draft: {_format_exception(e)}")
         if _is_auth_http_error(e):
             _echo_draft_auth_hints(url)
         sys.exit(1)
@@ -452,7 +507,7 @@ def upload(data_path: str,
     # Generate index if requested
     index_file = None
     if auto_index:
-        click.echo("\n[INFO] Generating byte-offset index...")
+        ui.info("Generating byte-offset index...")
         try:
             from .indexer import IndexGenerator, MultiFileIndexGenerator, save_index
 
@@ -461,8 +516,8 @@ def upload(data_path: str,
                 index_file = path.parent / f"{path.stem}_index.json"
                 index = IndexGenerator.generate(path)
                 save_index(index, index_file)
-                click.echo(f"[OK] Index generated: {index_file.name}")
-                click.echo(f"  Index size: {_format_bytes(index_file.stat().st_size)}")
+                ui.ok(f"Index generated: {index_file.name}")
+                ui.detail(f"Index size: {_format_bytes(index_file.stat().st_size)}")
             else:
                 # Generate master index for directory
                 index_file = path / f"{path.name}_index.json"
@@ -472,139 +527,113 @@ def upload(data_path: str,
                     strategy='master'
                 )
                 save_index(master_index, index_file)
-                click.echo(f"[OK] Master index generated: {index_file.name}")
-                click.echo(f"  Total files indexed: {master_index['total_files']}")
-                click.echo(f"  Index size: {_format_bytes(index_file.stat().st_size)}")
+                ui.ok(f"Master index generated: {index_file.name}")
+                ui.detail(f"Total files indexed: {master_index['total_files']}")
+                ui.detail(f"Index size: {_format_bytes(index_file.stat().st_size)}")
         except ImportError as e:
-            click.echo(f"[WARNING] Could not generate index: {e}", err=True)
+            ui.warn(f"Could not generate index: {e}")
             if 'h5py' in str(e):
-                click.echo("[HINT] Install required library: pip install h5py", err=True)
+                ui.detail("Install required library: pip install h5py", err=True)
             elif 'netCDF4' in str(e):
-                click.echo("[HINT] Install required library: pip install netCDF4", err=True)
+                ui.detail("Install required library: pip install netCDF4", err=True)
             elif 'numpy' in str(e).lower():
-                click.echo("[HINT] Install required library: pip install numpy", err=True)
-            click.echo("[WARNING] Continuing without index...", err=True)
+                ui.detail("Install required library: pip install numpy", err=True)
+            ui.warn("Continuing without index...")
             auto_index = False
         except Exception as e:
-            click.echo(f"[WARNING] Index generation failed: {e}", err=True)
-            click.echo("[WARNING] Continuing without index...", err=True)
+            ui.warn(f"Index generation failed: {e}")
+            ui.warn("Continuing without index...")
             auto_index = False
     
     # Upload files
+    ui.blank()
     if is_single_file:
-        # Single file upload
-        file_size = path.stat().st_size
-        click.echo(f"\n[INFO] File size: {_format_bytes(file_size)}")
-        click.echo(f"[INFO] Uploading file {path.name}...")
+        ui.info(f"Uploading file {path.name}...")
         try:
-            uploaded = client.upload_file(draft_id, str(path))
-            click.echo(f"[OK] Uploaded 1 file")
+            with ui.upload_progress(files_to_upload) as progress:
+                progress.start_file(path, 1, 1)
+                client.upload_file(draft_id, str(path), bytes_callback=progress.advance)
+            ui.ok("Uploaded 1 file")
             
             # Upload index if generated
             if auto_index and index_file and index_file.exists():
-                click.echo(f"[INFO] Uploading index file...")
                 client.upload_file(draft_id, str(index_file))
-                click.echo(f"[OK] Uploaded index file: {index_file.name}")
+                ui.ok(f"Uploaded index file: {index_file.name}")
         except Exception as e:
-            click.echo(f"[ERROR] Error uploading file: {e}", err=True)
+            ui.error(f"Error uploading file: {e}")
+            ui.detail(f"Draft saved at: {url}/uploads/{draft_id}", err=True)
             sys.exit(1)
     else:
-        # Directory upload
-        dir_size = _get_directory_size(path)
-        uploadable_files = InvenioClient.uploadable_files(str(path))
-        upload_mode = "single zip archive" if zip_upload else "individual files"
-        click.echo(f"\n[INFO] Directory size: {_format_bytes(dir_size)}")
-        click.echo(f"[INFO] Uploadable files: {len(uploadable_files)}")
-        click.echo(f"[INFO] Upload mode: {upload_mode}")
-        if not uploadable_files:
-            click.echo(
-                "[WARNING] No uploadable files found. metadata.json and hidden files are skipped.",
-                err=True,
-            )
-        elif zip_upload:
-            click.echo("[INFO] Creating zip archive before upload...")
+        if zip_upload and files_to_upload:
+            ui.info("Creating zip archive before upload...")
 
-        click.echo(f"\n[INFO] Uploading files from {path}...")
+        ui.info(f"Uploading files from {path}...")
         try:
-            def report_upload_progress(file_path: Path, index: int, total: int) -> None:
-                relative_path = file_path.relative_to(path)
-                file_size = _format_bytes(file_path.stat().st_size)
-                upload_name = file_path.name
-                if str(relative_path) == upload_name:
-                    click.echo(f"   [{index}/{total}] Uploading {relative_path} ({file_size})")
-                else:
-                    click.echo(
-                        f"   [{index}/{total}] Uploading {relative_path} as {upload_name} "
-                        f"({file_size})"
-                    )
-
-            uploaded = client.upload_directory(
-                draft_id, 
-                str(path),
-                create_zip=zip_upload,
-                progress_callback=None if zip_upload else report_upload_progress,
-            )
+            with ui.upload_progress(
+                [] if zip_upload else files_to_upload, root=path
+            ) as progress:
+                if zip_upload:
+                    progress.start_archive(f"{path.name}.zip")
+                uploaded = client.upload_directory(
+                    draft_id, 
+                    str(path),
+                    create_zip=zip_upload,
+                    progress_callback=None if zip_upload else progress.start_file,
+                    bytes_callback=progress.advance,
+                )
             uploaded_label = "archive" if zip_upload else "file(s)"
-            click.echo(f"[OK] Uploaded {len(uploaded)} {uploaded_label}")
+            ui.ok(f"Uploaded {len(uploaded)} {uploaded_label}")
             
             # Upload index if generated and not already in directory
             if auto_index and index_file and index_file.exists():
                 # Check if index was already uploaded as part of directory
                 if not any(f.get('key', '').endswith('_index.json') for f in uploaded):
-                    click.echo(f"[INFO] Uploading index file...")
                     client.upload_file(draft_id, str(index_file))
-                    click.echo(f"[OK] Uploaded index file: {index_file.name}")
+                    ui.ok(f"Uploaded index file: {index_file.name}")
         except Exception as e:
-            click.echo(f"[ERROR] Error uploading files: {e}", err=True)
+            ui.error(f"Error uploading files: {e}")
+            ui.detail(f"Draft saved at: {url}/uploads/{draft_id}", err=True)
             sys.exit(1)
     
     # Pre-select community on draft so users can continue in UI without
     # manually choosing the community later.
     if draft_only and community:
-        click.echo("\n[INFO] Setting draft community...")
         try:
             if hasattr(client, "set_draft_submission_community"):
-                client.set_draft_submission_community(
+                with ui.status("Setting draft community..."):
+                    client.set_draft_submission_community(
+                        draft_id,
+                        community_id=community,
+                    )
+                ui.ok(f"Draft linked to community: {community}")
+        except Exception as e:
+            ui.warn(f"Could not pre-select draft community: {_format_exception(e)}")
+            ui.detail("You can still choose the community manually in the UI.", err=True)
+
+    # Submit for review now, or keep as an editable draft with the community set.
+    ui.blank()
+    if draft_only:
+        ui.ok("Draft created successfully!")
+        ui.link("View at:", f"{url}/uploads/{draft_id}")
+        ui.detail("Review the draft in the UI, then submit it for community review when ready.")
+        if auto_index:
+            ui.detail("✨ Byte-offset index included for selective downloads")
+    else:
+        try:
+            with ui.status("Submitting draft for community review..."):
+                review_request = client.submit_draft_for_review(
                     draft_id,
                     community_id=community,
                 )
-                click.echo(f"[OK] Draft linked to community: {community}")
-        except Exception as e:
-            click.echo(
-                f"[WARNING] Could not pre-select draft community: {_format_exception(e)}",
-                err=True,
-            )
-            click.echo(
-                "          You can still choose the community manually in the UI.",
-                err=True,
-            )
-
-    # Submit for review now, or keep as an editable draft with the community set.
-    if draft_only:
-        click.echo(f"\n[OK] Draft created successfully!")
-        click.echo(f"   View at: {url}/uploads/{draft_id}")
-        click.echo("   Review the draft in the UI, then submit it for community review when ready.")
-        if auto_index:
-            click.echo(f"   ✨ Byte-offset index included for selective downloads")
-    else:
-        click.echo("\n[INFO] Submitting draft for community review...")
-        try:
-            review_request = client.submit_draft_for_review(
-                draft_id,
-                community_id=community,
-            )
-            click.echo("[OK] Draft submitted for community review!")
-            click.echo(f"   Community: {community}")
-            click.echo(f"   Request ID: {review_request.get('id', 'N/A')}")
-            click.echo(f"   View at: {url}/uploads/{draft_id}")
+            ui.ok("Draft submitted for community review!")
+            ui.detail(f"Community: {community}")
+            ui.detail(f"Request ID: {review_request.get('id', 'N/A')}")
+            ui.link("View at:", f"{url}/uploads/{draft_id}")
             if auto_index:
-                click.echo(f"   ✨ Byte-offset index included for selective downloads")
+                ui.detail("✨ Byte-offset index included for selective downloads")
         except Exception as e:
-            click.echo(
-                f"[ERROR] Error submitting for review: {_format_exception(e)}",
-                err=True,
-            )
-            click.echo(f"   Draft saved at: {url}/uploads/{draft_id}", err=True)
+            ui.error(f"Error submitting for review: {_format_exception(e)}")
+            ui.detail(f"Draft saved at: {url}/uploads/{draft_id}", err=True)
             sys.exit(1)
 
 

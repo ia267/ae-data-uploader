@@ -58,6 +58,28 @@ import requests
 from requests.exceptions import RequestException
 
 
+BytesCallback = Callable[[int, int], None]
+
+
+class _ProgressReader:
+    """File wrapper that reports bytes as requests streams the upload body."""
+
+    def __init__(self, fileobj, total: int, callback: BytesCallback):
+        self._file = fileobj
+        self._total = total
+        self._callback = callback
+
+    def read(self, size: int = -1) -> bytes:
+        chunk = self._file.read(size)
+        if chunk:
+            self._callback(len(chunk), self._total)
+        return chunk
+
+    def __len__(self) -> int:
+        # Lets requests send Content-Length instead of a chunked body.
+        return self._total
+
+
 class InvenioClient:
     """Client for interacting with Invenio-RDM API."""
     
@@ -278,7 +300,13 @@ class InvenioClient:
         self._ensure_allowed_community(target_community, resolved_community_id)
         return resolved_community_id
     
-    def upload_file(self, draft_id: str, file_path: str, filename: str = None) -> Dict[str, Any]:
+    def upload_file(
+        self,
+        draft_id: str,
+        file_path: str,
+        filename: str = None,
+        bytes_callback: Optional[BytesCallback] = None,
+    ) -> Dict[str, Any]:
         """
         Upload a file to an existing draft.
         
@@ -286,6 +314,8 @@ class InvenioClient:
             draft_id: ID of the draft record
             file_path: Path to the file to upload
             filename: Optional custom filename (defaults to basename of file_path)
+            bytes_callback: Optional callback called as the file content is
+                sent, with (bytes_in_chunk, file_size)
             
         Returns:
             Dictionary containing file upload information
@@ -355,9 +385,12 @@ class InvenioClient:
             upload_url = f"{files_link}/{filename}/content"
         
         with open(file_path, 'rb') as f:
+            body = f
+            if bytes_callback:
+                body = _ProgressReader(f, file_path.stat().st_size, bytes_callback)
             upload_response = self.session.put(
                 upload_url,
-                data=f,
+                data=body,
                 headers={'Content-Type': 'application/octet-stream'},
                 timeout=(30, None)  # 30s connect, unlimited read for large file streaming
             )
@@ -408,6 +441,7 @@ class InvenioClient:
         directory: str,
         create_zip: bool = True,
         progress_callback: Optional[Callable[[Path, int, int], None]] = None,
+        bytes_callback: Optional[BytesCallback] = None,
     ) -> List[Dict[str, Any]]:
         """
         Upload all files from a directory to a draft.
@@ -417,6 +451,8 @@ class InvenioClient:
             directory: Path to directory containing files
             create_zip: If True, creates a single zip file; if False, uploads files individually
             progress_callback: Optional callback called before each individual file upload
+            bytes_callback: Optional callback passed to upload_file() to report
+                bytes sent for each file (or for the zip archive)
             
         Returns:
             List of dictionaries containing upload information for each file
@@ -450,7 +486,9 @@ class InvenioClient:
                 
                 # Upload the zip file
                 zip_filename = f"{dir_path.name}.zip"
-                result = self.upload_file(draft_id, zip_path, zip_filename)
+                result = self.upload_file(
+                    draft_id, zip_path, zip_filename, bytes_callback=bytes_callback
+                )
                 uploaded_files.append(result)
             
             finally:
@@ -464,7 +502,9 @@ class InvenioClient:
             for index, file_path in enumerate(files_to_upload, start=1):
                 if progress_callback:
                     progress_callback(file_path, index, total_files)
-                result = self.upload_file(draft_id, str(file_path))
+                result = self.upload_file(
+                    draft_id, str(file_path), bytes_callback=bytes_callback
+                )
                 uploaded_files.append(result)
         
         return uploaded_files

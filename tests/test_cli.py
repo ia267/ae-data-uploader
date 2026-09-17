@@ -443,7 +443,7 @@ def test_upload_loads_user_config_without_env_file(
             return {"id": "draft-1"}
 
         def upload_directory(
-            self, _draft_id, _directory, create_zip=True, progress_callback=None
+            self, _draft_id, _directory, create_zip=True, progress_callback=None, **_kwargs
         ):
             return [{"key": "data.h5"}]
 
@@ -500,7 +500,7 @@ def test_upload_directory_reports_individual_file_progress(
             return {"id": "draft-1"}
 
         def upload_directory(
-            self, _draft_id, directory, create_zip=True, progress_callback=None
+            self, _draft_id, directory, create_zip=True, progress_callback=None, **_kwargs
         ):
             upload_args["directory"] = directory
             upload_args["create_zip"] = create_zip
@@ -561,7 +561,7 @@ def test_upload_directory_zip_mode_uses_archive_upload(
             return {"id": "draft-2"}
 
         def upload_directory(
-            self, _draft_id, _directory, create_zip=True, progress_callback=None
+            self, _draft_id, _directory, create_zip=True, progress_callback=None, **_kwargs
         ):
             upload_args["create_zip"] = create_zip
             upload_args["progress_callback"] = progress_callback
@@ -618,7 +618,7 @@ def test_upload_draft_preselects_community_when_configured(
             return {"id": "draft-7"}
 
         def upload_directory(
-            self, _draft_id, _directory, create_zip=True, progress_callback=None
+            self, _draft_id, _directory, create_zip=True, progress_callback=None, **_kwargs
         ):
             return [{"key": "a.h5"}]
 
@@ -675,7 +675,7 @@ def test_upload_submit_review_submits_draft_for_community_review(
             return {"id": "draft-8"}
 
         def upload_directory(
-            self, _draft_id, _directory, create_zip=True, progress_callback=None
+            self, _draft_id, _directory, create_zip=True, progress_callback=None, **_kwargs
         ):
             return [{"key": "a.h5"}]
 
@@ -962,3 +962,80 @@ def test_configure_defaults_to_dev_url(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert "[https://data-dev.ae.ic.ac.uk]" in result.output
     assert load_config()["url"] == "https://data-dev.ae.ic.ac.uk"
+
+
+def _summary_test_client(calls):
+    from ae_uploader.client import InvenioClient
+
+    class _DummyClient:
+        uploadable_files = staticmethod(InvenioClient.uploadable_files)
+
+        def __init__(self, *_args, **_kwargs):
+            self.session = type("Session", (), {"verify": True})()
+
+        def test_connection(self):
+            return True
+
+        def resolve_submission_community(self, community):
+            return community
+
+        def create_draft(self, _metadata):
+            calls.append("create_draft")
+            return {"id": "draft-9"}
+
+        def upload_directory(self, _draft_id, _directory, **_kwargs):
+            calls.append("upload_directory")
+            return [{"key": "a.h5"}]
+
+        def set_draft_submission_community(self, _draft_id, community_id=None):
+            calls.append("set_community")
+
+    return _DummyClient
+
+
+def _summary_test_data(tmp_path, valid_metadata):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "a.h5").write_bytes(b"x" * 2048)
+    (data_dir / "metadata.json").write_text(json.dumps(valid_metadata), encoding="utf-8")
+    return data_dir
+
+
+def test_upload_shows_summary_and_can_be_cancelled(tmp_path, valid_metadata: dict, monkeypatch):
+    _set_test_config_dir(monkeypatch, tmp_path)
+    data_dir = _summary_test_data(tmp_path, valid_metadata)
+    calls = []
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _summary_test_client(calls))
+    monkeypatch.setattr("ae_uploader.cli._stdin_is_interactive", lambda: True)
+
+    result = CliRunner().invoke(
+        cli,
+        ["upload", str(data_dir), "--url", "https://example.org", "--token", "token"],
+        input="n\n",
+    )
+
+    assert result.exit_code == 0
+    assert "Ready to upload" in result.output
+    assert "Server: https://example.org" in result.output
+    assert f"Title: {valid_metadata['title']}" in result.output
+    assert "Uploadable files: 1 (2.00 KB)" in result.output
+    assert "Continue?" in result.output
+    assert "Upload cancelled" in result.output
+    assert calls == []
+
+
+def test_upload_yes_skips_confirmation(tmp_path, valid_metadata: dict, monkeypatch):
+    _set_test_config_dir(monkeypatch, tmp_path)
+    data_dir = _summary_test_data(tmp_path, valid_metadata)
+    calls = []
+    monkeypatch.setattr("ae_uploader.cli.InvenioClient", _summary_test_client(calls))
+    monkeypatch.setattr("ae_uploader.cli._stdin_is_interactive", lambda: True)
+
+    result = CliRunner().invoke(
+        cli,
+        ["upload", str(data_dir), "--url", "https://example.org", "--token", "token", "--yes"],
+    )
+
+    assert result.exit_code == 0
+    assert "Continue?" not in result.output
+    assert calls == ["create_draft", "upload_directory", "set_community"]

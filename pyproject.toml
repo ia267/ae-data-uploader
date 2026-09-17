@@ -33,6 +33,7 @@ dependencies = [
     "numpy>=1.26.0",
     "platformdirs>=4.0.0",
     "keyring>=24.0.0",
+    "rich>=13.0.0",
 ]
 
 [project.optional-dependencies]

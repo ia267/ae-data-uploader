@@ -587,3 +587,46 @@ def test_test_connection_records_error_reason():
     client = InvenioClient("not-a-url", "token")
     assert client.test_connection() is False
     assert "No scheme supplied" in client.last_connection_error
+
+
+def test_upload_file_reports_bytes_and_keeps_content_length(tmp_path: Path):
+    from ae_uploader.client import _ProgressReader
+
+    client = InvenioClient("https://example.org", "token")
+    data_file = tmp_path / "big.h5"
+    data_file.write_bytes(b"z" * 100_000)
+
+    init_response = Mock()
+    init_response.raise_for_status = Mock()
+    init_response.json.return_value = {
+        "entries": [{"key": "big.h5", "links": {"content": "/content"}}]
+    }
+    upload_response = Mock()
+    upload_response.raise_for_status = Mock()
+    upload_response.content = b""
+
+    sent = {}
+
+    def fake_put(_url, data=None, **_kwargs):
+        assert isinstance(data, _ProgressReader)
+        sent["length"] = len(data)
+        body = b""
+        while True:
+            chunk = data.read(8192)
+            if not chunk:
+                break
+            body += chunk
+        sent["body"] = body
+        return upload_response
+
+    client._draft_resource = Mock(return_value={"id": "d", "links": {}})
+    client.session.post = Mock(return_value=init_response)
+    client.session.put = fake_put
+    progress = []
+
+    client.upload_file("d", str(data_file), bytes_callback=lambda n, total: progress.append((n, total)))
+
+    assert sent["length"] == 100_000
+    assert sent["body"] == b"z" * 100_000
+    assert sum(n for n, _ in progress) == 100_000
+    assert {total for _, total in progress} == {100_000}

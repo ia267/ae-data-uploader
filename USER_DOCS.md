@@ -111,6 +111,12 @@ ae-upload validate metadata.json --verbose
 ae-upload validate metadata.json --schema schema.json
 ```
 
+Before anything is created on the server, `upload` shows a summary (server,
+title, community, number and size of files) and asks you to confirm. In a
+terminal, uploads show a progress bar for each file. Use `--yes` to skip the
+confirmation, for example in scripts; it is also skipped automatically when
+input is not an interactive terminal.
+
 Directory upload:
 
 Put `metadata.json` in the same directory as the data files you upload.
@@ -149,6 +155,7 @@ Common options:
 ```bash
 ae-upload upload ./my_data
 ae-upload upload ./my_data --zip
+ae-upload upload ./my_data --yes
 ae-upload upload ./my_data --metadata /path/to/metadata.json
 ae-upload upload ./my_data --schema schema.json
 ae-upload upload ./my_data --auto-index --index-pattern "*.h5"
