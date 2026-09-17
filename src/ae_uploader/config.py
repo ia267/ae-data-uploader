@@ -217,6 +217,50 @@ def load_token(url: str) -> Optional[str]:
     return _load_fallback_tokens().get(url)
 
 
+def _delete_keyring_token(url: str) -> bool:
+    try:
+        import keyring
+    except ImportError:
+        return False
+
+    try:
+        if not keyring.get_password(KEYRING_SERVICE, url):
+            return False
+        keyring.delete_password(KEYRING_SERVICE, url)
+    except Exception:
+        return False
+    return True
+
+
+def delete_token(*urls: str) -> List[str]:
+    """
+    Delete saved tokens for the given URLs from every local store.
+
+    Returns a description of each place a token was removed from. The token
+    is not revoked on the server; that has to be done in the Invenio UI.
+    """
+    keys = []
+    for url in urls:
+        url = (url or "").strip()
+        if url and url not in keys:
+            keys.append(url)
+
+    removed: List[str] = []
+    if any([_delete_keyring_token(url) for url in keys]):
+        removed.append("system credential store")
+
+    credentials_path = fallback_credentials_path()
+    tokens = _load_fallback_tokens(credentials_path)
+    remaining = {key: value for key, value in tokens.items() if key not in keys}
+    if len(remaining) != len(tokens):
+        if remaining:
+            _secure_write_json(credentials_path, {"tokens": remaining})
+        else:
+            credentials_path.unlink()
+        removed.append(str(credentials_path))
+    return removed
+
+
 def save_token(
     url: str, token: str, allow_file: bool = False
 ) -> CredentialStorageResult:

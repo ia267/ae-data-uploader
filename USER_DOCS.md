@@ -39,6 +39,17 @@ account, run:
 ae-upload configure --token-file
 ```
 
+To remove the saved token from your computer, for example before leaving a
+shared machine:
+
+```bash
+ae-upload logout
+```
+
+This does not revoke the token. Delete it in the Invenio web interface under
+**Settings → Applications → Personal access tokens**
+(`<invenio-url>/account/settings/applications/`).
+
 Interactive setup:
 
 ```bash
@@ -203,6 +214,7 @@ instead.
 
 ```bash
 ae-upload info
+ae-upload logout
 ae-upload schema --output schema.json
 ae-upload export-form --output metadata_form.html
 ae-upload generate-index ./my_data --pattern "*.h5"

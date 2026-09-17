@@ -886,3 +886,49 @@ def test_configure_token_file_flag_saves_token_without_keyring(tmp_path, monkeyp
     assert result.exit_code == 0
     assert (config_dir / "credentials.json").exists()
     assert "[WARNING]" in result.output
+
+
+def test_logout_removes_saved_token_and_explains_revocation(tmp_path, monkeypatch):
+    config_dir = _set_test_config_dir(monkeypatch, tmp_path)
+    monkeypatch.delenv("INVENIO_URL", raising=False)
+    monkeypatch.delenv("INVENIO_TOKEN", raising=False)
+    monkeypatch.setattr("ae_uploader.config._save_keyring_token", lambda _u, _t: False)
+    monkeypatch.setattr("ae_uploader.config._get_keyring_token", lambda _u: None)
+    monkeypatch.setattr("ae_uploader.config._delete_keyring_token", lambda _u: False)
+    save_config("https://example.org", "domain", "ae-dept-data", ["ae-dept-data"])
+    from ae_uploader import config
+
+    config.save_token("https://example.org", "secret-token", allow_file=True)
+    config.save_token("https://other.org", "other-token", allow_file=True)
+
+    result = CliRunner().invoke(cli, ["logout"])
+
+    assert result.exit_code == 0
+    assert "Removed saved token" in result.output
+    assert "https://example.org/account/settings/applications/" in result.output
+    assert config.load_token("https://example.org") is None
+    assert config.load_token("https://other.org") == "other-token"
+    assert load_config()["url"] == "https://example.org"
+
+
+def test_logout_without_saved_token(tmp_path, monkeypatch):
+    _set_test_config_dir(monkeypatch, tmp_path)
+    monkeypatch.delenv("INVENIO_URL", raising=False)
+    monkeypatch.setenv("INVENIO_TOKEN", "env-token")
+    monkeypatch.setattr("ae_uploader.config._delete_keyring_token", lambda _u: False)
+
+    result = CliRunner().invoke(cli, ["logout", "--url", "example.org"])
+
+    assert result.exit_code == 0
+    assert "No saved token found for https://example.org" in result.output
+    assert "INVENIO_TOKEN is set" in result.output
+
+
+def test_logout_requires_url(tmp_path, monkeypatch):
+    _set_test_config_dir(monkeypatch, tmp_path)
+    monkeypatch.delenv("INVENIO_URL", raising=False)
+
+    result = CliRunner().invoke(cli, ["logout"])
+
+    assert result.exit_code == 1
+    assert "No Invenio URL configured" in result.output

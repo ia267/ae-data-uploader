@@ -29,6 +29,7 @@ from .prompts import prompt_secret
 from .config import (
     CredentialStorageResult,
     load_config,
+    delete_token,
     load_token,
     save_config,
     save_token,
@@ -900,6 +901,40 @@ def generate_index(file_or_directory: str,
     except Exception as e:
         click.echo(f"[ERROR] Failed to generate index: {e}", err=True)
         sys.exit(1)
+
+
+@cli.command()
+@click.option('--url', '-u', help='Invenio base URL (default: the configured URL)')
+def logout(url: Optional[str]):
+    """
+    Remove the saved access token from this computer.
+
+    Non-secret settings (URL, community) are kept. The token itself stays
+    valid on the server until you delete it in the Invenio web interface.
+    """
+    raw_url = url or os.environ.get('INVENIO_URL') or load_config().get("url")
+    if not raw_url:
+        click.echo("[ERROR] No Invenio URL configured. Use --url to choose one.", err=True)
+        sys.exit(1)
+    url = _normalise_url_or_exit(raw_url)
+
+    removed = delete_token(url, raw_url)
+    if removed:
+        for location in removed:
+            click.echo(f"[OK] Removed saved token from {location}")
+    else:
+        click.echo(f"[INFO] No saved token found for {url}")
+
+    if os.environ.get('INVENIO_TOKEN'):
+        click.echo(
+            "[WARNING] INVENIO_TOKEN is set in your environment; "
+            "unset it to stop using that token.",
+            err=True,
+        )
+
+    click.echo("\nThe token is still valid on the server. To revoke it:")
+    click.echo(f"  1. Open {url}/account/settings/applications/")
+    click.echo("  2. Delete the token under 'Personal access tokens'")
 
 
 @cli.command()

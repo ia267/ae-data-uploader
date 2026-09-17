@@ -78,6 +78,7 @@ ae-upload schema --output schema.json
 ae-upload export-form --output metadata_form.html
 ae-upload generate-index ./my_data --pattern "*.h5"
 ae-upload info
+ae-upload logout
 ```
 
 ## Documentation
