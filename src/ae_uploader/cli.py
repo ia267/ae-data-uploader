@@ -201,7 +201,7 @@ def cli():
 @click.option('--community', '-c', help='Community ID or slug for submission')
 @click.option('--metadata', '-m', 
               type=click.Path(exists=True),
-              help='Path to metadata.json (default: looks in data_path parent directory)')
+              help='Path to metadata.json (default: metadata.json inside DATA_PATH, or next to it for a single file)')
 @click.option('--zip/--no-zip', 'zip_upload', default=False,
               help='Upload directories as a single zip archive instead of individual files')
 @click.option('--draft-only', 'draft_only_requested', is_flag=True,
@@ -1071,7 +1071,8 @@ def configure(insecure: bool):
             click.echo(f"[WARNING] {token_storage.warning}", err=True)
     click.echo("\nFor each new dataset:")
     click.echo("  ae-upload export-form --output metadata_form.html")
-    click.echo("  # open metadata_form.html in your browser and download metadata.json")
+    click.echo("  # open metadata_form.html in your browser, download metadata.json")
+    click.echo("  # and save it inside ./my_data_directory")
     click.echo("  ae-upload upload ./my_data_directory")
     click.echo("\nFor scripts or temporary credentials, use environment variables:")
     click.echo("  INVENIO_TOKEN=... ae-upload upload ./data")

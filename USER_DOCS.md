@@ -67,7 +67,8 @@ Recommended (web form):
 
 ```bash
 ae-upload export-form --output metadata_form.html
-# open metadata_form.html in your browser and download metadata.json
+# open metadata_form.html in your browser, download metadata.json
+# and save it inside the data directory you will upload
 ```
 
 Alternative (CLI template):
@@ -94,6 +95,20 @@ ae-upload validate metadata.json --schema schema.json
 
 Directory upload:
 
+Put `metadata.json` in the same directory as the data files you upload.
+`ae-upload` reads it from there automatically and does not upload it:
+
+```text
+my_data_directory/
+├── metadata.json
+├── run_0000.h5
+└── run_0001.h5
+```
+
+If `metadata.json` is somewhere else, pass it with
+`--metadata /path/to/metadata.json`.
+
+
 ```bash
 ae-upload upload ./my_data
 ```
@@ -105,8 +120,11 @@ for community review when ready.
 Single file upload:
 
 ```bash
-ae-upload upload ./my_data/file.h5 --metadata /path/to/metadata.json
+ae-upload upload ./my_data/file.h5
 ```
+
+For a single file, `metadata.json` is read from the same directory as the file
+(`./my_data/metadata.json` here) unless you pass `--metadata`.
 
 Common options:
 
@@ -151,6 +169,28 @@ multiple approved destinations.
 - `INVENIO_COMMUNITIES` defines the approved allowlist of communities.
 - `--community <community-id-or-slug>` overrides the default for a single
   upload, but only to one of the approved communities.
+
+## Advanced Tab Completion
+
+`ae-upload configure` offers to enable TAB completion for commands, options and
+file paths in bash, zsh and fish. If you skipped it, enable it later with:
+
+```bash
+ae-upload completion --install
+```
+
+Then open a new terminal and try `ae-upload up<TAB>`. This adds one marked
+line to `~/.bashrc` or `~/.zshrc` (fish uses its completions directory).
+Completion only works while the `venv` with `ae-upload` is active.
+
+To print the script instead of installing it:
+
+```bash
+ae-upload completion zsh
+```
+
+Completion is not available in Windows PowerShell or cmd; use WSL or Git Bash
+instead.
 
 ## Other Commands
 

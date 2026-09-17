@@ -31,10 +31,24 @@ After this step, you only need to repeat it if your credentials or preferred com
 
 ```bash
 ae-upload export-form --output metadata_form.html
-# open metadata_form.html in your browser and download metadata.json
+# open metadata_form.html in your browser, download metadata.json
+# and save it inside the data directory you will upload
 ```
 
 ## Step 3: Upload Data
+
+Put `metadata.json` in the same directory as the data files you upload.
+`ae-upload` reads it from there automatically and does not upload it:
+
+```text
+your_data_directory/
+├── metadata.json
+├── run_0000.h5
+└── run_0001.h5
+```
+
+If `metadata.json` is somewhere else, pass it with
+`--metadata /path/to/metadata.json`.
 
 ```bash
 ae-upload upload ./your_data_directory
@@ -44,6 +58,6 @@ Uploads are created as drafts and linked to the default community
 `ae-dept-data`. Open the draft in the Invenio UI, check the files and
 metadata, then submit it for community review when ready.
 
-Metadata validation happens automatically during upload. Place `metadata.json` in the data directory, or pass it with `--metadata /path/to/metadata.json`.
+Metadata validation happens automatically during upload.
 
 For advanced options, including custom community targeting, see `USER_DOCS.md`.

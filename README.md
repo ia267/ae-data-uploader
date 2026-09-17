@@ -32,9 +32,23 @@ ae-upload configure
 **For each new dataset:**
 ```bash
 ae-upload export-form --output metadata_form.html
-# open metadata_form.html in your browser and download metadata.json
+# open metadata_form.html in your browser, download metadata.json
+# and save it inside ./my_data_directory
 ae-upload upload ./my_data_directory
 ```
+
+Put `metadata.json` in the same directory as the data files you upload.
+`ae-upload` reads it from there automatically and does not upload it:
+
+```text
+my_data_directory/
+├── metadata.json
+├── run_0000.h5
+└── run_0001.h5
+```
+
+If `metadata.json` is somewhere else, pass it with
+`--metadata /path/to/metadata.json`.
 
 After `ae-upload configure`, non-secret settings are saved in your user config
 directory and the token is stored in the system credential store when available.
@@ -54,18 +68,6 @@ Routine uploads stay as drafts so you can check the record in the Invenio UI
 before submitting it for community review. Direct publish without review is disabled.
 
 See `QUICKSTART.md` for the minimal first-run flow.
-
-## Tab Completion
-
-`ae-upload configure` offers to enable TAB completion for commands, options and
-file paths (bash, zsh and fish). To enable it later:
-
-```bash
-ae-upload completion --install
-```
-
-Then open a new terminal and try `ae-upload up<TAB>`. Completion is not
-available in Windows PowerShell or cmd; use WSL or Git Bash instead.
 
 ## Common Options
 
