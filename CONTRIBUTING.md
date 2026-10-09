@@ -5,7 +5,7 @@ Thanks for contributing to `ae-uploader`.
 ## Local Setup
 
 ```bash
-git clone git@github.ic.ac.uk:aeronautics/ae-data-uploader.git
+git clone https://github.com/ia267/ae-data-uploader.git
 cd ae-data-uploader
 uv venv venv
 source venv/bin/activate

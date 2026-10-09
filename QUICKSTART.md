@@ -7,7 +7,7 @@ Fastest path to your first upload with `ae-upload`.
 Install with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv tool install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
+uv tool install git+https://github.com/ia267/ae-data-uploader.git
 ```
 
 If you don't have `uv` yet, install it first:
@@ -20,7 +20,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 ```
 
 If `ae-upload` is not found afterwards, run `uv tool update-shell` and open a
-new terminal. Installing needs SSH access to `github.ic.ac.uk`.
+new terminal.
 
 Update to the latest version with `uv tool upgrade ae-uploader`.
 

@@ -8,7 +8,7 @@ For the shortest first-run path, use `QUICKSTART.md`.
 Install with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv tool install git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
+uv tool install git+https://github.com/ia267/ae-data-uploader.git
 ```
 
 If you don't have `uv` yet, install it first:
@@ -21,7 +21,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 ```
 
 If `ae-upload` is not found afterwards, run `uv tool update-shell` and open a
-new terminal. Installing needs SSH access to `github.ic.ac.uk`.
+new terminal.
 
 Update to the latest version with `uv tool upgrade ae-uploader`.
 
@@ -31,7 +31,7 @@ To remove it: `uv tool uninstall ae-uploader`.
 files. Add them to the installed tool with:
 
 ```bash
-uv tool install --reinstall --with h5py --with netCDF4 git+ssh://git@github.ic.ac.uk/aeronautics/ae-data-uploader.git
+uv tool install --reinstall --with h5py --with netCDF4 git+https://github.com/ia267/ae-data-uploader.git
 ```
 
 ## Configure Credentials (one-time setup)
