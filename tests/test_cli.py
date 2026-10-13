@@ -136,7 +136,7 @@ def test_configure_command_shows_export_form_next_steps(tmp_path, monkeypatch):
     assert "Enter namespace" not in result.output
 
 
-def test_configure_uses_default_community_without_advanced_prompt(tmp_path, monkeypatch):
+def test_configure_uses_default_community_without_prompting(tmp_path, monkeypatch):
     config_dir = _set_test_config_dir(monkeypatch, tmp_path)
 
     class _DummyResponse:
@@ -176,6 +176,7 @@ def test_configure_uses_default_community_without_advanced_prompt(tmp_path, monk
         )
 
     assert result.exit_code == 0
+    assert "Configure advanced community options" not in result.output
     config = load_config()
     assert config["url"] == "https://example.org"
     assert config["namespace"] == "domain"
@@ -183,7 +184,7 @@ def test_configure_uses_default_community_without_advanced_prompt(tmp_path, monk
     assert config["allowed_communities"] == ["ae-dept-data"]
 
 
-def test_configure_can_set_advanced_communities(tmp_path, monkeypatch):
+def test_configure_community_flags_set_default_and_allowlist(tmp_path, monkeypatch):
     config_dir = _set_test_config_dir(monkeypatch, tmp_path)
 
     class _DummyResponse:
@@ -218,14 +219,31 @@ def test_configure_can_set_advanced_communities(tmp_path, monkeypatch):
     with runner.isolated_filesystem():
         result = runner.invoke(
             cli,
-            ["configure"],
-            input="https://example.org\nsecret-token\ny\nfuture-lab-data\nae-dept-data\n",
+            [
+                "configure",
+                "--community", "future-lab-data",
+                "--allow-community", "ae-dept-data",
+                "--allow-community", "other-lab,future-lab-data",
+            ],
+            input="https://example.org\nsecret-token\n",
         )
 
     assert result.exit_code == 0
+    assert "Configure advanced community options" not in result.output
+    assert "Uploads go to the future-lab-data community" in result.output
     config = load_config()
     assert config["community"] == "future-lab-data"
-    assert config["allowed_communities"] == ["future-lab-data", "ae-dept-data"]
+    assert config["allowed_communities"] == ["future-lab-data", "ae-dept-data", "other-lab"]
+
+
+def test_configure_rejects_empty_community(tmp_path, monkeypatch):
+    _set_test_config_dir(monkeypatch, tmp_path)
+
+    result = CliRunner().invoke(cli, ["configure", "--community", " "])
+
+    assert result.exit_code == 2
+    assert "--community" in result.output
+    assert not load_config()
 
 
 def test_upload_submit_review_without_community_is_rejected(tmp_path):

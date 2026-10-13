@@ -81,6 +81,38 @@ class UI:
         else:
             self._plain("ERROR", message, err=True)
 
+    def heading(self, title: str) -> None:
+        """Print a command banner."""
+        if self.rich:
+            self.out.print(Panel(f"[bold]{escape(title)}[/]", border_style="cyan", expand=False))
+        else:
+            click.echo("=" * 50)
+            click.echo(title)
+            click.echo("=" * 50)
+
+    def step(self, number: int, title: str) -> None:
+        """Print a numbered step header, preceded by a blank line."""
+        if self.rich:
+            self.out.print(f"\n[bold cyan]Step {number}:[/] [bold]{escape(title)}[/]")
+        else:
+            click.echo(f"\nStep {number}: {title}")
+
+    def section(self, title: str) -> None:
+        """Print a bold section label, preceded by a blank line."""
+        if self.rich:
+            self.out.print(f"\n[bold]{escape(title)}[/]")
+        else:
+            click.echo(f"\n{title}")
+
+    def command(self, text: str) -> None:
+        """Print an example shell command, or a ``# comment`` line, for users to copy."""
+        if not self.rich:
+            click.echo(f"  {text}")
+        elif text.startswith("#"):
+            self.out.print(f"  [dim]{escape(text)}[/]")
+        else:
+            self.out.print(f"  [green]{escape(text)}[/]")
+
     def detail(self, message: str, err: bool = False) -> None:
         """Print an indented follow-up line for the previous message."""
         console = self.err if err else self.out
@@ -116,9 +148,10 @@ class UI:
 
     def link(self, label: str, url: str) -> None:
         if self.rich:
-            self.out.print(f"  {escape(label)} [link={url}]{escape(url)}[/link]")
+            label = f"{escape(label)} " if label else ""
+            self.out.print(f"  {label}[link={url}][cyan]{escape(url)}[/][/link]")
         else:
-            click.echo(f"   {label} {url}")
+            click.echo(f"   {label} {url}" if label else f"   {url}")
 
     def upload_progress(self, files: List[Path], root: Optional[Path] = None) -> "UploadProgress":
         return UploadProgress(self, files, root)

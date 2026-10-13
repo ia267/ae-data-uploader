@@ -11,6 +11,7 @@ import click
 from click.shell_completion import get_completion_class
 
 from .config import user_config_dir
+from .ui import UI
 
 
 PROG_NAME = "ae-upload"
@@ -102,12 +103,13 @@ def install_completion(cli: click.Command, shell: str) -> CompletionInstallResul
 
 def echo_install_result(result: CompletionInstallResult) -> None:
     """Print what install_completion() did and how to start using it."""
-    click.echo(f"[OK] Tab completion script saved to {result.script_path}")
+    ui = UI()
+    ui.ok(f"Tab completion script saved to {result.script_path}")
     if result.rc_updated:
-        click.echo(f"[OK] Added completion setup to {result.rc_path}")
+        ui.ok(f"Added completion setup to {result.rc_path}")
     elif result.rc_path:
-        click.echo(f"[OK] {result.rc_path} already loads ae-upload completion")
+        ui.ok(f"{result.rc_path} already loads ae-upload completion")
     if result.shell == "fish":
-        click.echo("   Open a new terminal to start using it.")
+        ui.detail("Open a new terminal to start using it.")
     else:
-        click.echo(f"   Open a new terminal (or run: source {result.rc_path}) to start using it.")
+        ui.detail(f"Open a new terminal (or run: source {result.rc_path}) to start using it.")

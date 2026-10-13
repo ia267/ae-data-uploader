@@ -208,6 +208,23 @@ Most users should skip this section.
 Use this only if you need to target a non-default approved community or allow
 multiple approved destinations.
 
+To save this in your configuration, pass flags to `configure`:
+
+```bash
+ae-upload configure --community my-lab-data --allow-community ae-dept-data
+```
+
+- `--community` sets the default community that uploads go to.
+- `--allow-community` adds another approved community that
+  `upload --community` may target. Repeat it or comma-separate values for
+  several. The default community is always approved.
+
+Running `ae-upload configure` without these flags resets both to
+`ae-dept-data`.
+
+For a single shell session or script, environment variables override the saved
+configuration:
+
 - `INVENIO_COMMUNITY` sets the default approved community.
 - `INVENIO_COMMUNITIES` defines the approved allowlist of communities.
 - `--community <community-id-or-slug>` overrides the default for a single

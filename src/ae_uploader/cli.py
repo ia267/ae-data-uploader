@@ -201,18 +201,19 @@ def _save_user_credentials(
 
 def _echo_token_storage(token_storage: CredentialStorageResult) -> None:
     """Explain where the token was saved, or why it was not."""
+    ui = UI()
     if token_storage.method == "keyring":
-        click.echo("[OK] Token saved to the system credential store")
+        ui.ok("Token saved to the system credential store")
     elif token_storage.method == "file":
-        click.echo(f"[OK] Token saved to {token_storage.path}")
+        ui.ok(f"Token saved to {token_storage.path}")
         if token_storage.warning:
-            click.echo(f"[WARNING] {token_storage.warning}", err=True)
+            ui.warn(token_storage.warning)
     else:
-        click.echo(f"[INFO] {token_storage.warning}")
-        click.echo("   You will be asked for the token each time you upload,")
-        click.echo("   or you can set INVENIO_TOKEN for a single command.")
-        click.echo(
-            "   To save it in a file readable only by your account instead, run: "
+        ui.info(token_storage.warning)
+        ui.detail("You will be asked for the token each time you upload,")
+        ui.detail("or you can set INVENIO_TOKEN for a single command.")
+        ui.detail(
+            "To save it in a file readable only by your account instead, run: "
             "ae-upload configure --token-file"
         )
 
@@ -1046,7 +1047,13 @@ def info():
 @click.option('--token-file', is_flag=True,
               help='If no system credential store is available, save the token '
                    'in a file readable only by your account instead of not saving it')
-def configure(insecure: bool, token_file: bool):
+@click.option('--community', '-c', default=DEFAULT_COMMUNITY, show_default=True,
+              help='Advanced: default community ID or slug that uploads go to')
+@click.option('--allow-community', 'extra_communities', multiple=True, metavar='COMMUNITY',
+              help='Advanced: also allow uploads to this community with '
+                   '"upload --community". Repeat or comma-separate for several.')
+def configure(insecure: bool, token_file: bool, community: str,
+              extra_communities: tuple):
     """
     Configure Invenio-RDM credentials interactively.
     
@@ -1055,27 +1062,39 @@ def configure(insecure: bool, token_file: bool):
     token to the system credential store. If no credential store is
     available, the token is not saved and upload asks for it each time
     (unless --token-file is given).
+
+    Uploads go to the default repository community unless --community is
+    given. Only the default community and any --allow-community values are
+    accepted by "upload --community".
     
     \b
     Examples:
       ae-upload configure
       ae-upload configure --insecure
       ae-upload configure --token-file
+      ae-upload configure --community my-lab-data --allow-community ae-dept-data
     """
-    click.echo("=" * 50)
-    click.echo("Invenio-RDM Credentials Setup")
-    click.echo("=" * 50)
+    community = community.strip()
+    if not community:
+        raise click.BadParameter("must not be empty", param_hint="'--community'")
+    allowed_communities = parse_community_list(
+        ",".join([community, *extra_communities])
+    )
+
+    ui = UI()
+    ui.heading("Invenio-RDM Credentials Setup")
     
     config_path = user_config_path()
     if config_path.exists():
-        click.echo(f"\n[WARNING] ae-upload configuration already exists at {config_path}")
+        ui.blank()
+        ui.warn(f"ae-upload configuration already exists at {config_path}")
         if not click.confirm('Overwrite existing configuration?', default=False):
-            click.echo("Configuration cancelled.")
+            ui.info("Configuration cancelled.")
             return
     
     # Prompt for URL
-    click.echo("\nStep 1: Invenio-RDM Instance URL")
-    click.echo("  Press Enter to use the default shown in brackets")
+    ui.step(1, "Invenio-RDM Instance URL")
+    ui.detail("Press Enter to use the default shown in brackets")
     while True:
         try:
             url = normalise_base_url(
@@ -1083,46 +1102,23 @@ def configure(insecure: bool, token_file: bool):
             )
             break
         except ValueError as e:
-            click.echo(f"[ERROR] {e}", err=True)
-    click.echo(f"  Using {url}")
+            ui.error(str(e))
+    ui.ok(f"Using {url}")
 
     # Prompt for token
-    click.echo("\nStep 2: Access Token")
-    click.echo("  You can create a token at:")
-    click.echo(f"  {url}/account/settings/applications/tokens/new/")
+    ui.step(2, "Access Token")
+    ui.detail("You can create a token at:")
+    ui.link("", f"{url}/account/settings/applications/tokens/new/")
     token = prompt_secret('\nEnter access token')
     
-    # Prompt for advanced community settings only when needed.
     namespace = "domain"
-    click.echo("\nStep 3: Upload Destination")
-    click.echo(
-        f"  Standard uploads use the default repository community "
-        f"({DEFAULT_COMMUNITY})."
-    )
-    community = DEFAULT_COMMUNITY
-    allowed_communities = [DEFAULT_COMMUNITY]
-    if click.confirm(
-        "\nConfigure advanced community options?", default=False
-    ):
-        click.echo("  Use this only if you need a non-default target or multiple approved communities")
-        community = click.prompt(
-            '\nEnter default community ID or slug',
-            type=str,
-            default=DEFAULT_COMMUNITY,
-            show_default=True,
-        )
-        additional_communities = click.prompt(
-            '\nEnter additional communities',
-            type=str,
-            default='',
-            show_default=False,
-        )
-        allowed_communities = parse_community_list(
-            ",".join([community, additional_communities])
-        )
+    ui.step(3, "Upload Destination")
+    ui.ok(f"Uploads go to the {community} community")
+    if len(allowed_communities) > 1:
+        ui.detail(f"Also allowed with --community: {', '.join(allowed_communities[1:])}")
 
     # Test connection
-    click.echo("\n[INFO] Testing connection...")
+    ui.blank()
     try:
         client = InvenioClient(
             url,
@@ -1134,22 +1130,23 @@ def configure(insecure: bool, token_file: bool):
 
         if insecure:
             client.session.verify = False
-            click.echo("[WARNING] SSL verification disabled for connection test")
+            ui.warn("SSL verification disabled for connection test")
         try:
-            resp = client.session.get(f"{client.base_url}/api/records")
+            with ui.status("Testing connection..."):
+                resp = client.session.get(f"{client.base_url}/api/records")
             if resp.status_code in [200, 403]:
-                click.echo("[OK] Connection successful!")
+                ui.ok("Connection successful!")
             else:
-                click.echo(f"[WARNING] Server returned status code: {resp.status_code}")
-                click.echo("Check that your URL is correct (should be the base URL, not /api)")
+                ui.warn(f"Server returned status code: {resp.status_code}")
+                ui.detail("Check that your URL is correct (should be the base URL, not /api)", err=True)
         except Exception as e:
-            click.echo(f"[WARNING] Connection failed: {e}")
-            click.echo("Check your network connection and URL typo.")
+            ui.warn(f"Connection failed: {e}")
+            ui.detail("Check your network connection and URL typo.", err=True)
 
     except Exception as e:
-        click.echo(f"[WARNING] Connection test failed: {e}")
+        ui.warn(f"Connection test failed: {e}")
         if not click.confirm('\nSave credentials anyway?', default=True):
-            click.echo("Configuration cancelled.")
+            ui.info("Configuration cancelled.")
             return
     
     # Save configuration and token
@@ -1161,15 +1158,16 @@ def configure(insecure: bool, token_file: bool):
         allowed_communities,
         allow_token_file=token_file,
     )
-    click.echo(f"\n[OK] Configuration saved to {config_path}")
+    ui.blank()
+    ui.ok(f"Configuration saved to {config_path}")
     _echo_token_storage(token_storage)
-    click.echo("\nFor each new dataset:")
-    click.echo("  ae-upload export-form --output metadata_form.html")
-    click.echo("  # open metadata_form.html in your browser, download metadata.json")
-    click.echo("  # and save it inside ./my_data_directory")
-    click.echo("  ae-upload upload ./my_data_directory")
-    click.echo("\nFor scripts or temporary credentials, use environment variables:")
-    click.echo("  INVENIO_TOKEN=... ae-upload upload ./data")
+    ui.section("For each new dataset:")
+    ui.command("ae-upload export-form --output metadata_form.html")
+    ui.command("# open metadata_form.html in your browser, download metadata.json")
+    ui.command("# and save it inside ./my_data_directory")
+    ui.command("ae-upload upload ./my_data_directory")
+    ui.section("For scripts or temporary credentials, use environment variables:")
+    ui.command("INVENIO_TOKEN=... ae-upload upload ./data")
     _offer_completion_install()
 
 
@@ -1178,14 +1176,15 @@ def _offer_completion_install() -> None:
     shell = detect_shell()
     if not shell or not sys.stdin.isatty() or is_completion_installed(shell):
         return
-    click.echo("\nTab completion lets you press TAB to complete ae-upload commands and options.")
+    ui = UI()
+    ui.section("Tab completion lets you press TAB to complete ae-upload commands and options.")
     if not click.confirm(f"Enable tab completion for {shell}?", default=True):
-        click.echo("  You can enable it later with: ae-upload completion --install")
+        ui.detail("You can enable it later with: ae-upload completion --install")
         return
     try:
         echo_install_result(install_completion(cli, shell))
     except OSError as e:
-        click.echo(f"[WARNING] Could not enable tab completion: {e}", err=True)
+        ui.warn(f"Could not enable tab completion: {e}")
 
 
 @cli.command()
